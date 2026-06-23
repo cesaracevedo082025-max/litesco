@@ -3,6 +3,13 @@
  * LITESCO - Página de artículo dinámica
  * Con tabla de contenidos, fecha en español y botones de navegación
  */
+// ===== META PIXEL ID =====
+define('META_PIXEL_ID', 'REEMPLAZAR_CON_TU_PIXEL_ID');
+
+// ===== CACHÉ: artículos publicados (30 minutos) =====
+header('Cache-Control: public, max-age=1800, stale-while-revalidate=3600');
+header('Vary: Accept-Encoding');
+
 // ===== CONFIG =====
 $db_config = [
     'host'     => 'localhost',
@@ -204,9 +211,10 @@ header('Content-Type: text/html; charset=UTF-8');
     '@context'=>'https://schema.org',
     '@type'=>['LegalService','Organization'],
     'name'=>'LITESCO',
+    'legalName'=>'LITESCO S.A.S.',
     'alternateName'=>'Litigio Estratégico Colombiano',
     'url'=>'https://litesco.com.co',
-    'logo'=>['@type'=>'ImageObject','url'=>'https://litesco.com.co/favicon.webp','width'=>512,'height'=>512],
+    'logo'=>['@type'=>'ImageObject','url'=>'https://litesco.com.co/images/hero-poster.webp','width'=>1280,'height'=>720],
     'description'=>'Servicios jurídicos para empresas de todos los sectores en Colombia. Litigio estratégico, derecho corporativo y recuperación de cartera en Bogotá.',
     'address'=>[
         '@type'=>'PostalAddress',
@@ -216,16 +224,33 @@ header('Content-Type: text/html; charset=UTF-8');
         'postalCode'=>'110321',
         'addressCountry'=>'CO',
     ],
-    'geo'=>['@type'=>'GeoCoordinates','latitude'=>'4.6097','longitude'=>'-74.0817'],
+    'geo'=>['@type'=>'GeoCoordinates','latitude'=>'4.5978','longitude'=>'-74.0762'],
     'telephone'=>'+573132037572',
     'email'=>'gerencia@litesco.com.co',
     'priceRange'=>'$$',
-    'areaServed'=>['@type'=>'City','name'=>'Bogotá'],
+    'areaServed'=>[
+        ['@type'=>'City','name'=>'Bogotá'],
+        ['@type'=>'Country','name'=>'Colombia'],
+    ],
+    'knowsAbout'=>[
+        'Litigios civiles y comerciales','Procesos ejecutivos','Derecho societario',
+        'Constitución de empresas','Contratos mercantiles','Recuperación de cartera',
+        'Cobranza BPO','Derecho laboral empresarial','Insolvencia y reestructuración',
+        'Asesoría legal corporativa',
+    ],
+    'hasOfferCatalog'=>[
+        '@type'=>'OfferCatalog','name'=>'Servicios Jurídicos LITESCO',
+        'itemListElement'=>[
+            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Litis – Litigio Estratégico','description'=>'Representación legal en procesos civiles, comerciales y administrativos']],
+            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Corporativo – Asesoría Empresarial','description'=>'Constitución de empresas, contratos y cumplimiento normativo']],
+            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Recuperación de Cartera BPO','description'=>'Gestión integral de cobranza prejudicial y judicial']],
+        ],
+    ],
     'openingHoursSpecification'=>[
         ['@type'=>'OpeningHoursSpecification','dayOfWeek'=>['Monday','Tuesday','Wednesday','Thursday','Friday'],'opens'=>'08:00','closes'=>'18:00'],
         ['@type'=>'OpeningHoursSpecification','dayOfWeek'=>'Saturday','opens'=>'09:00','closes'=>'13:00'],
     ],
-    'hasMap'=>'https://share.google/yZDG6hqb23yWhZMrh',
+    'hasMap'=>['https://share.google/yZDG6hqb23yWhZMrh','https://share.google/3vWRBs0lEnxSZUihT'],
     'contactPoint'=>['@type'=>'ContactPoint','telephone'=>'+573132037572','contactType'=>'customer service','availableLanguage'=>'Spanish'],
     'sameAs'=>[
         'https://www.linkedin.com/company/litesco/',
@@ -234,45 +259,68 @@ header('Content-Type: text/html; charset=UTF-8');
         'https://www.tiktok.com/@litesco.co',
         'https://linktr.ee/LITESCO',
         'https://share.google/yZDG6hqb23yWhZMrh',
+        'https://share.google/3vWRBs0lEnxSZUihT',
     ],
 ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?></script>
+<?php
+$pixelConsent = ($_COOKIE['litesco_cookie_consent'] ?? '0') === '1';
+if ($pixelConsent && META_PIXEL_ID !== 'REEMPLAZAR_CON_TU_PIXEL_ID'):
+    $pid = htmlspecialchars(META_PIXEL_ID, ENT_QUOTES, 'UTF-8');
+?>
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '<?= $pid ?>');
+fbq('track', 'PageView');
+fbq('track', 'ViewContent', { content_name: '<?= addslashes($title) ?>', content_category: '<?= addslashes($catName) ?>' });
+</script>
+<noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?= $pid ?>&ev=PageView&noscript=1" alt=""></noscript>
+<?php endif; ?>
 <style>
 /* ── RESET Y BASE ─────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#1e293b;-webkit-font-smoothing:antialiased;overflow-x:hidden;max-width:100vw}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#1e293b;-webkit-font-smoothing:antialiased;overflow-x:hidden;max-width:100vw;padding-top:64px}
 a{text-decoration:none}
 
 /* ── NAV ──────────────────────────────────────── */
-.nav{background:#0A1628;position:sticky;top:0;z-index:50;border-bottom:1px solid rgba(245,158,11,0.12)}
-.nav-inner{max-width:1300px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.nav{background:#020617;position:fixed;top:0;left:0;right:0;z-index:10000;border-bottom:1px solid #1e293b;box-shadow:0 1px 20px rgba(0,0,0,.5)}
+.nav-inner{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:64px;gap:8px}
 .nav-logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:900;font-size:18px;text-decoration:none;flex-shrink:0}
-.nav-logo img{width:40px;height:40px;border-radius:50%;border:2px solid rgba(245,158,11,0.3)}
+.nav-logo img{width:40px;height:40px;border-radius:50%;border:2px solid #334155;box-shadow:0 0 0 2px #1e293b}
 .nav-logo-text{display:flex;flex-direction:column;line-height:1.2}
-.nav-logo-title{font-size:17px;font-weight:900;letter-spacing:0.5px}
-.nav-logo-sub{font-size:9px;font-weight:700;color:#f59e0b;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
-.nav-logo-sub::before{content:'';width:16px;height:1.5px;background:#f59e0b}
-.nav-links{display:flex;align-items:center;gap:20px}
-.nav-links a{color:#94a3b8;font-size:14px;font-weight:600;transition:color 0.2s}
-.nav-links a:hover{color:#f59e0b}
-.nav-cta{background:linear-gradient(135deg,#f59e0b,#d97706);color:#0A1628!important;padding:9px 18px;border-radius:10px;font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 16px rgba(245,158,11,0.3);transition:all 0.2s}
-.nav-cta:hover{box-shadow:0 6px 24px rgba(245,158,11,0.45);transform:translateY(-1px)}
-.nav-cta svg{width:13px;height:13px}
-.nav-hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:4px;z-index:101;flex-shrink:0}
-.nav-hamburger span{display:block;width:22px;height:2px;background:#f59e0b;border-radius:2px;transition:all 0.2s}
-.nav-services{position:relative;cursor:pointer;display:flex;align-items:center;gap:4px;color:#94a3b8;font-size:14px;font-weight:600;transition:color 0.2s;background:none;border:none;font-family:inherit}
-.nav-services:hover{color:#f59e0b}
-.nav-services svg{width:12px;height:12px;transition:transform 0.2s}
-.nav-dropdown{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:12px;background:#0f1d32;border:1px solid rgba(245,158,11,0.15);border-radius:12px;padding:8px;min-width:200px;opacity:0;visibility:hidden;transition:all 0.2s;box-shadow:0 16px 48px rgba(0,0,0,0.4)}
-.nav-services:hover .nav-dropdown{opacity:1;visibility:visible;margin-top:8px}
-.nav-dropdown a{display:block;padding:10px 14px;border-radius:8px;color:#94a3b8!important;font-size:13px;white-space:nowrap}
-.nav-dropdown a:hover{background:rgba(245,158,11,0.08);color:#f59e0b!important}
-@media(max-width:768px){
-  .nav-links{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#0A1628;flex-direction:column;align-items:center;justify-content:center;gap:28px;z-index:100}
+.nav-logo-title{font-size:17px;font-weight:900;letter-spacing:-0.3px;color:#fff;transition:color .3s}
+.nav-logo:hover .nav-logo-title{color:#f59e0b}
+.nav-logo-sub{font-size:9px;font-weight:700;color:#64748b;letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:5px;margin-top:2px}
+.nav-logo-sub::before{content:'';width:12px;height:1px;background:#f59e0b;border-radius:2px;display:inline-block;transition:width .5s}
+.nav-logo:hover .nav-logo-sub::before{width:24px}
+.nav-logo:hover .nav-logo-sub{color:#fde68a}
+.nav-links{display:flex;align-items:center;gap:2px}
+.nav-links>a{color:#94a3b8;font-size:14px;font-weight:600;transition:color .2s,background .2s;padding:6px 14px;border-radius:9999px;position:relative}
+.nav-links>a:hover{color:#fff;background:#1e293b}
+.nav-links>a.nav-active{color:#f59e0b}
+.nav-links>a.nav-active::after{content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:#f59e0b;border-radius:50%}
+.nav-cta{background:linear-gradient(135deg,#d97706,#f59e0b)!important;color:#fff!important;padding:8px 18px!important;border-radius:9999px!important;font-weight:800!important;font-size:13px!important;display:inline-flex!important;align-items:center!important;gap:7px!important;box-shadow:0 4px 16px rgba(245,158,11,.3)!important;transition:all .2s!important;margin-left:8px}
+.nav-cta:hover{box-shadow:0 6px 24px rgba(245,158,11,.45)!important;transform:translateY(-1px)!important}
+.nav-services-wrap{position:relative}
+.nav-services-btn{display:flex;align-items:center;gap:6px;color:#94a3b8;font-size:14px;font-weight:600;background:none;border:none;cursor:pointer;padding:6px 14px;border-radius:9999px;transition:color .2s,background .2s}
+.nav-services-btn:hover,.nav-services-wrap.open .nav-services-btn{color:#fff;background:#1e293b}
+.nav-services-btn.nav-active{color:#f59e0b}
+.nav-services-btn svg{transition:transform .25s}
+.nav-services-wrap.open .nav-services-btn svg{transform:rotate(-180deg)}
+.nav-dropdown{position:absolute;top:calc(100% + 12px);left:50%;transform:translateX(-50%);background:#020617;border:1px solid #1e293b;border-radius:16px;padding:8px;min-width:200px;box-shadow:0 16px 48px rgba(0,0,0,.6);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s,top .2s;pointer-events:none}
+.nav-services-wrap.open .nav-dropdown{opacity:1;visibility:visible;pointer-events:auto;top:calc(100% + 8px)}
+.nav-dropdown a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;color:#94a3b8!important;font-size:13px;font-weight:600;transition:all .15s;border:1px solid transparent}
+.nav-dropdown a:hover{background:#0f172a;border-color:#1e293b;color:#fff!important}
+.nav-dropdown-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#1e293b;color:#94a3b8;flex-shrink:0;transition:all .2s}
+.nav-dropdown a:hover .nav-dropdown-icon{background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff}
+.nav-hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:6px;flex-shrink:0;z-index:10001}
+.nav-hamburger span{display:block;width:22px;height:2px;background:#f59e0b;border-radius:2px;transition:all .2s}
+@media(max-width:1024px){
+  .nav-links{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#020617;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:10000}
   .nav-links.open{display:flex}
-  .nav-logo-sub{display:none}
-  .nav-services{flex-direction:column;align-items:center}
-  .nav-dropdown{position:static;transform:none;opacity:1;visibility:visible;margin-top:8px;background:transparent;border:none;box-shadow:none;text-align:center}
+  .nav-services-wrap{flex-direction:column;align-items:center}
+  .nav-dropdown{position:static;transform:none;opacity:1!important;visibility:visible!important;pointer-events:auto!important;top:0!important;margin-top:8px;background:transparent;border:none;box-shadow:none;text-align:center;padding:4px}
+  .nav-dropdown a{justify-content:center}
   .nav-hamburger{display:flex}
 }
 
@@ -638,7 +686,7 @@ a{text-decoration:none}
 .wa-float svg{width:26px;height:26px;fill:#fff}
 
 /* ── PROGRESS BAR ─────────────────────────────── */
-.read-progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(to right,#f59e0b,#d97706);z-index:200;width:0%;transition:width 0.1s}
+.read-progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(to right,#f59e0b,#d97706);z-index:10001;width:0%;transition:width 0.1s}
 
 /* ── TOC MÓVIL (collapsible) ──────────────────── */
 .toc-mobile{display:none;margin-bottom:24px}
@@ -660,33 +708,39 @@ a{text-decoration:none}
 <body>
 <div class="read-progress" id="readProgress"></div>
 
+<?php
+$_np = strtok($_SERVER['REQUEST_URI'], '?');
+$_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recuperacion']);
+?>
 <!-- NAV -->
-<nav class="nav">
+<nav class="nav" id="mainNav">
   <div class="nav-inner">
-    <a href="/" class="nav-logo">
-      <img src="/favicon.webp" alt="LITESCO" width="40" height="40">
+    <a href="/" class="nav-logo" aria-label="LITESCO — inicio">
+      <img src="/favicon.webp" alt="" aria-hidden="true" width="40" height="40" loading="eager">
       <div class="nav-logo-text">
         <span class="nav-logo-title">LITESCO</span>
         <span class="nav-logo-sub">Litigio Estratégico Colombiano</span>
       </div>
     </a>
-    <button class="nav-hamburger" id="navHamburger" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Menú">
+    <button class="nav-hamburger" id="navHamburger" aria-label="Abrir menú" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
     <div class="nav-links" id="navLinks">
-      <a href="/">Inicio</a>
-      <a href="/sobre-nosotros">Nosotros</a>
-      <div class="nav-services">
-        Servicios <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        <div class="nav-dropdown">
-          <a href="/corporativo">Derecho Corporativo</a>
-          <a href="/litis">Litigio Estratégico</a>
-          <a href="/recuperacion">Recuperación de Cartera</a>
+      <a href="/" class="<?= $_np==='/' ? 'nav-active' : '' ?>">Inicio</a>
+      <a href="/sobre-nosotros" class="<?= $_np==='/sobre-nosotros' ? 'nav-active' : '' ?>">Nosotros</a>
+      <div class="nav-services-wrap" id="navServicesWrap">
+        <button class="nav-services-btn<?= $_ns ? ' nav-active' : '' ?>" id="navServicesBtn" aria-haspopup="true" aria-expanded="false">
+          Servicios <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="nav-dropdown" id="navDropdown">
+          <a href="/corporativo"><span class="nav-dropdown-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20 7h-4V5c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm-6-2v2h-4V5h4z"/></svg></span>Corporativo</a>
+          <a href="/litis"><span class="nav-dropdown-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></span>Litis</a>
+          <a href="/recuperacion"><span class="nav-dropdown-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></span>Recuperación</a>
         </div>
       </div>
-      <a href="/blog" style="color:#f59e0b">Blog</a>
-      <a href="/faq">FAQ</a>
-      <a href="/contacto" class="nav-cta">Contáctanos <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <a href="/blog" class="nav-active">Blog</a>
+      <a href="/faq" class="<?= $_np==='/faq' ? 'nav-active' : '' ?>">FAQ</a>
+      <a href="/contacto" class="nav-cta">Contáctanos <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
     </div>
   </div>
 </nav>
@@ -1050,6 +1104,34 @@ a{text-decoration:none}
 </a>
 
 <script>
+// ── Nav: hamburger + services dropdown ────────────────────────
+(function(){
+  var hbg = document.getElementById('navHamburger');
+  var lnk = document.getElementById('navLinks');
+  var swrap = document.getElementById('navServicesWrap');
+  var sbtn = document.getElementById('navServicesBtn');
+  if(hbg && lnk){
+    hbg.addEventListener('click', function(){
+      var open = lnk.classList.toggle('open');
+      hbg.setAttribute('aria-expanded', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    });
+  }
+  if(sbtn && swrap){
+    sbtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var open = swrap.classList.toggle('open');
+      sbtn.setAttribute('aria-expanded', open);
+    });
+    document.addEventListener('click', function(e){
+      if(!swrap.contains(e.target)){
+        swrap.classList.remove('open');
+        sbtn.setAttribute('aria-expanded','false');
+      }
+    });
+  }
+})();
+
 // ── Progreso + scroll top ──────────────────────────────────────
 const scrollBtn = document.getElementById('scrollTop');
 const progress  = document.getElementById('readProgress');
@@ -1060,21 +1142,11 @@ window.addEventListener('scroll', function(){
   scrollY > 400 ? scrollBtn.classList.add('visible') : scrollBtn.classList.remove('visible');
 },{passive:true});
 
-// ── TOC scroll + highlight activo ─────────────────────────────
+// ── TOC scroll ────────────────────────────────────────────────
 function scrollToSection(id){
   const el = document.getElementById(id);
   if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
-const tocIds = <?= json_encode(array_column($toc, 'id')) ?>;
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if(entry.isIntersecting){
-      tocIds.forEach(id => document.getElementById('toc-'+id)?.classList.remove('active'));
-      document.getElementById('toc-'+entry.target.id)?.classList.add('active');
-    }
-  });
-},{rootMargin:'-15% 0px -75% 0px'});
-tocIds.forEach(id => { const el = document.getElementById(id); if(el) obs.observe(el); });
 
 // ── Tabs TOC / FAQ ─────────────────────────────────────────────
 function switchTab(tab){
@@ -1090,7 +1162,7 @@ function switchTab(tab){
   if(faqQ)     faqQ.style.color = tab==='faq' ? '#f59e0b' : '#334155';
 }
 
-// ── TOC active highlight ───────────────────────────────────────
+// ── TOC highlight activo ───────────────────────────────────────
 (function(){
   const items = document.querySelectorAll('.toc-item');
   if(!items.length) return;

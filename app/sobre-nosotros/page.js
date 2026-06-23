@@ -9,8 +9,22 @@ export const metadata = {
   },
 }
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://litesco.com.co' },
+    { '@type': 'ListItem', position: 2, name: 'Sobre Nosotros', item: 'https://litesco.com.co/sobre-nosotros' },
+  ],
+}
+
 import SobreNosotrosPage from '@/views/SobreNosotrosPage'
 
 export default function Page() {
-  return <SobreNosotrosPage />
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <SobreNosotrosPage />
+    </>
+  )
 }

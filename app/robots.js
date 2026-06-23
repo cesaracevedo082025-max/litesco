@@ -6,11 +6,12 @@ export default function robots() {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin', '/private', '/blog/_placeholder'],
+      disallow: ['/cms-servicios', '/blog/_placeholder', '/litis/_placeholder', '/corporativo/_placeholder', '/recuperacion/_placeholder'],
     },
     sitemap: [
       'https://litesco.com.co/sitemap.xml',
       'https://litesco.com.co/blog-sitemap.php',
+      'https://litesco.com.co/servicios-sitemap.php',
     ],
   }
 }
