@@ -153,6 +153,16 @@ $content = preg_replace_callback('/<h2([^>]*)>/i', function($m) use (&$tocCounte
     return "<h2{$m[1]} id=\"{$id}\">";
 }, $content);
 
+// Partir el contenido en bloques por cada H2, para mostrarlo como tarjetas
+// alternadas en vez de un único bloque de texto largo
+$contentBlocks = array_values(array_filter(
+    preg_split('/(?=<h2)/i', $content),
+    fn($block) => trim(strip_tags($block)) !== ''
+));
+if (empty($contentBlocks) && trim(strip_tags($content)) !== '') {
+    $contentBlocks = [$content];
+}
+
 // ─── JSON-LD SCHEMAS ─────────────────────────────────────────────────────────
 $schemaOrg = [
     '@context' => 'https://schema.org',
@@ -290,7 +300,7 @@ if (!$previewMode && META_PIXEL_ID !== ''):
 /* ── RESET ─────────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{font-family:'Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-top:64px}
+body{font-family:'Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;color:#1e293b;-webkit-font-smoothing:antialiased;overflow-x:hidden;padding-top:<?= $previewMode ? '0' : '64px' ?>}
 a{text-decoration:none}
 
 /* ── NAVBAR ──────────────────────────────────────── */
@@ -348,8 +358,14 @@ a{text-decoration:none}
 .svc-section-title{color:#0A1628;font-size:clamp(1.35rem,3vw,1.9rem);font-weight:900;letter-spacing:-0.02em;margin:0 0 36px;font-family:'Montserrat',sans-serif}
 .svc-section-title-light{color:#fff}
 
+/* ── REVEAL ON SCROLL ─────────────────────────────── */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1)}
+.reveal.in-view{opacity:1;transform:translateY(0)}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+
 /* ── HERO (split, landing) ────────────────────────── */
-.svc-hero{background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);padding:clamp(28px,5vw,48px) 0 clamp(40px,6vw,64px)}
+.svc-hero{position:relative;background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);padding:clamp(28px,5vw,48px) 0 clamp(36px,5vw,56px);overflow:hidden}
+.svc-hero::before{content:'';position:absolute;top:-120px;right:-100px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,0.1) 0%,transparent 70%);pointer-events:none}
 .svc-hero-inner{max-width:1300px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:1.1fr 0.9fr;gap:clamp(28px,5vw,56px);align-items:center}
 @media(max-width:900px){.svc-hero-inner{grid-template-columns:1fr;gap:28px}}
 .svc-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.28);border-radius:20px;padding:6px 14px;margin-bottom:18px;font-size:11.5px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:1.2px;font-family:'Montserrat',sans-serif}
@@ -362,9 +378,6 @@ a{text-decoration:none}
 .svc-btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(10,22,40,0.32)}
 .svc-btn-wa{background:#25D366;color:#fff;box-shadow:0 6px 20px rgba(37,211,102,0.3)}
 .svc-btn-wa:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,211,102,0.38)}
-.svc-hero-trust{display:flex;flex-wrap:wrap;gap:10px 22px}
-.svc-trust-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#64748b;font-weight:600}
-.svc-trust-item svg{flex-shrink:0}
 .svc-hero-media{position:relative}
 .svc-hero-media-frame{position:relative;border-radius:24px;overflow:hidden;box-shadow:0 24px 64px rgba(10,22,40,0.18);aspect-ratio:6/5}
 .svc-hero-media-frame::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(10,22,40,0.35),transparent 45%)}
@@ -372,17 +385,34 @@ a{text-decoration:none}
 .svc-hero-media-badge{position:absolute;bottom:-14px;left:20px;background:#fff;border-radius:14px;padding:10px 16px;box-shadow:0 10px 30px rgba(10,22,40,0.15);font-weight:800;font-size:13px;color:#0A1628;display:flex;align-items:center;gap:8px;font-family:'Montserrat',sans-serif}
 @media(max-width:900px){.svc-hero-media-badge{left:50%;transform:translateX(-50%)}}
 
+/* ── BARRA DE ESTADÍSTICAS ────────────────────────── */
+.svc-stats{background:#0A1628;padding:28px 24px}
+.svc-stats-inner{max-width:1300px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+@media(max-width:800px){.svc-stats-inner{grid-template-columns:repeat(2,1fr)}}
+.svc-stat{text-align:center;border-right:1px solid rgba(255,255,255,0.08)}
+.svc-stat:last-child{border-right:none}
+@media(max-width:800px){.svc-stat:nth-child(2n){border-right:none}.svc-stat{border-right:none;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:16px}.svc-stat:nth-last-child(-n+2){border-bottom:none;padding-bottom:0}}
+.svc-stat-num{color:#f59e0b;font-size:clamp(1.5rem,3vw,2.1rem);font-weight:900;font-family:'Montserrat',sans-serif;letter-spacing:-0.02em}
+.svc-stat-label{color:rgba(255,255,255,0.55);font-size:12px;font-weight:600;margin-top:4px}
+
 /* ── BENEFICIOS ("Por qué elegirnos") ─────────────── */
 .svc-benefits{background:#fff;padding:clamp(48px,7vw,72px) 24px;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9}
 .svc-benefits-inner{max-width:1300px;margin:0 auto;text-align:center}
 .svc-benefits .svc-section-eyebrow,.svc-benefits .svc-section-title{text-align:center}
-.svc-benefits-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:left}
+.svc-benefits-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:20px;text-align:left}
 @media(max-width:1000px){.svc-benefits-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:560px){.svc-benefits-grid{grid-template-columns:1fr}}
-.svc-benefit-card{background:#f8fafc;border:1px solid #f1f5f9;border-radius:18px;padding:24px 22px}
-.svc-benefit-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 6px 18px rgba(245,158,11,0.3)}
+.svc-benefit-card{background:#f8fafc;border:1px solid #f1f5f9;border-radius:18px;padding:24px 22px;grid-column:span 2;transition:all .25s cubic-bezier(.22,1,.36,1)}
+.svc-benefit-card:first-child{grid-column:span 3;background:linear-gradient(135deg,#0A1628,#0F2744);border-color:transparent}
+@media(max-width:1000px){.svc-benefit-card,.svc-benefit-card:first-child{grid-column:span 2}}
+@media(max-width:560px){.svc-benefits-grid{grid-template-columns:1fr}.svc-benefit-card,.svc-benefit-card:first-child{grid-column:span 1}}
+.svc-benefit-card:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(10,22,40,0.12);border-color:#f59e0b}
+.svc-benefit-card:first-child:hover{box-shadow:0 16px 36px rgba(10,22,40,0.35)}
+.svc-benefit-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 6px 18px rgba(245,158,11,0.3);transition:transform .25s}
+.svc-benefit-card:hover .svc-benefit-icon{transform:scale(1.08) rotate(-4deg)}
 .svc-benefit-title{color:#0A1628;font-weight:800;font-size:15px;margin-bottom:8px;font-family:'Montserrat',sans-serif}
 .svc-benefit-desc{color:#64748b;font-size:13px;line-height:1.65}
+.svc-benefit-card:first-child .svc-benefit-title{color:#fff;font-size:17px}
+.svc-benefit-card:first-child .svc-benefit-desc{color:rgba(255,255,255,0.6)}
 
 /* ── CONTENIDO ───────────────────────────────────── */
 .svc-content-section{padding:clamp(48px,7vw,72px) 24px;background:#f8fafc}
@@ -391,6 +421,8 @@ a{text-decoration:none}
 .svc-quicknav a{flex-shrink:0;background:#fff;border:1px solid #e2e8f0;border-radius:9999px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#475569;white-space:nowrap;transition:all .15s}
 .svc-quicknav a:hover{border-color:#f59e0b;color:#b45309;background:#fffbeb}
 .svc-content-card{background:#fff;border-radius:24px;border:1px solid #f1f5f9;box-shadow:0 4px 24px rgba(10,22,40,0.05);padding:clamp(24px,4vw,48px)}
+.svc-content-card+.svc-content-card{margin-top:20px}
+.svc-content-card-alt{background:#fffdf7;border-color:#fde9c8}
 .ac{overflow-wrap:break-word;word-break:break-word;min-width:0}
 .ac h2{color:#0A1628;font-size:clamp(1.1rem,2.5vw,1.4rem);font-weight:900;margin:2.5rem 0 1.1rem;line-height:1.25;padding:0 0 12px;border-bottom:2px solid #f1f5f9;letter-spacing:-0.02em;scroll-margin-top:24px;font-family:'Montserrat',sans-serif}
 .ac h2:first-child{margin-top:0}
@@ -420,19 +452,22 @@ a{text-decoration:none}
 .ac [data-callout-body]{font-size:.87rem;line-height:1.65;display:block}
 
 /* ── PROCESO ──────────────────────────────────────── */
-.svc-process{background:linear-gradient(160deg,#0A1628,#0d1f3c 60%,#071020);padding:clamp(48px,7vw,72px) 24px}
-.svc-process-inner{max-width:1300px;margin:0 auto;text-align:center}
+.svc-process{position:relative;background:linear-gradient(160deg,#0A1628,#0d1f3c 60%,#071020);padding:clamp(48px,7vw,72px) 24px;overflow:hidden}
+.svc-process::before{content:'';position:absolute;bottom:-140px;left:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,0.1) 0%,transparent 70%);pointer-events:none}
+.svc-process-inner{max-width:1300px;margin:0 auto;text-align:center;position:relative}
 .svc-process .svc-section-eyebrow,.svc-process .svc-section-title{text-align:center}
 .svc-process-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:left;counter-reset:step}
 @media(max-width:1000px){.svc-process-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.svc-process-grid{grid-template-columns:1fr}}
-.svc-step{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:24px 22px;position:relative}
-.svc-step-num{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#020617;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-family:'Montserrat',sans-serif}
+.svc-step{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:24px 22px;position:relative;transition:all .25s cubic-bezier(.22,1,.36,1)}
+.svc-step:hover{background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.3);transform:translateY(-4px)}
+.svc-step-num{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#020617;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-family:'Montserrat',sans-serif;transition:transform .25s}
+.svc-step:hover .svc-step-num{transform:scale(1.1) rotate(-6deg)}
 .svc-step-title{color:#fff;font-weight:800;font-size:14.5px;margin-bottom:8px;font-family:'Montserrat',sans-serif}
 .svc-step-desc{color:rgba(255,255,255,0.55);font-size:12.5px;line-height:1.65}
 
 /* ── FAQs ─────────────────────────────────────────── */
-.svc-faq-section{padding:0 24px clamp(48px,7vw,72px);background:#f8fafc}
+.svc-faq-section{padding:0 24px clamp(48px,7vw,72px);background:linear-gradient(180deg,#f8fafc,#fef9ef)}
 .svc-faq-inner{max-width:820px;margin:0 auto}
 .faq-item{border:1px solid #e2e8f0;border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .2s;background:#fff}
 .faq-item.open{border-color:#f59e0b}
@@ -460,8 +495,9 @@ a{text-decoration:none}
 .svc-related-cta{display:inline-flex;align-items:center;gap:6px;color:#b45309;font-size:12px;font-weight:800}
 
 /* ── CTA FINAL ────────────────────────────────────── */
-.svc-final-cta{background:linear-gradient(135deg,#0A1628,#0F2744);padding:clamp(48px,7vw,72px) 24px;text-align:center}
-.svc-final-cta-inner{max-width:680px;margin:0 auto}
+.svc-final-cta{position:relative;background:linear-gradient(135deg,#0A1628,#0F2744);padding:clamp(48px,7vw,72px) 24px;text-align:center;overflow:hidden}
+.svc-final-cta::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:420px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,0.14) 0%,transparent 70%);pointer-events:none}
+.svc-final-cta-inner{max-width:680px;margin:0 auto;position:relative}
 .svc-final-cta h2{color:#fff;font-size:clamp(1.3rem,3vw,1.8rem);font-weight:900;letter-spacing:-0.02em;margin-bottom:12px;font-family:'Montserrat',sans-serif}
 .svc-final-cta p{color:rgba(255,255,255,0.55);font-size:14.5px;margin-bottom:28px}
 .svc-final-cta .svc-hero-ctas{justify-content:center;margin-bottom:0}
@@ -503,6 +539,7 @@ a{text-decoration:none}
 $_np = strtok($_SERVER['REQUEST_URI'], '?');
 $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recuperacion']);
 ?>
+<?php if (!$previewMode): ?>
 <!-- NAV -->
 <nav class="nav" id="mainNav">
   <div class="nav-inner">
@@ -535,6 +572,7 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
     </div>
   </div>
 </nav>
+<?php endif; ?>
 
 <!-- BREADCRUMB -->
 <div class="bc">
@@ -573,20 +611,6 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
         </a>
         <?php endif; ?>
       </div>
-      <div class="svc-hero-trust">
-        <div class="svc-trust-item">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-          Primera consulta gratuita
-        </div>
-        <div class="svc-trust-item">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Respuesta en menos de 24h
-        </div>
-        <div class="svc-trust-item">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A1628" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          +57 313 203 7572
-        </div>
-      </div>
     </div>
     <div class="svc-hero-media">
       <div class="svc-hero-media-frame">
@@ -597,31 +621,83 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
   </div>
 </section>
 
+<!-- ESTADÍSTICAS -->
+<section class="svc-stats">
+  <div class="svc-stats-inner">
+    <div class="svc-stat reveal">
+      <div class="svc-stat-num" data-count="10" data-suffix="+">0</div>
+      <div class="svc-stat-label">Años de experiencia</div>
+    </div>
+    <div class="svc-stat reveal">
+      <div class="svc-stat-num" data-count="500" data-suffix="+">0</div>
+      <div class="svc-stat-label">Casos gestionados</div>
+    </div>
+    <div class="svc-stat reveal">
+      <div class="svc-stat-num" data-count="24" data-suffix="h">0</div>
+      <div class="svc-stat-label">Tiempo de respuesta</div>
+    </div>
+    <div class="svc-stat reveal">
+      <div class="svc-stat-num" data-count="100" data-suffix="%">0</div>
+      <div class="svc-stat-label">Consulta inicial gratuita</div>
+    </div>
+  </div>
+</section>
+
 <!-- POR QUÉ ELEGIRNOS -->
 <section class="svc-benefits">
   <div class="svc-benefits-inner">
     <div class="svc-section-eyebrow">Por qué elegirnos</div>
     <h2 class="svc-section-title">La tranquilidad de un equipo especializado</h2>
     <div class="svc-benefits-grid">
-      <div class="svc-benefit-card">
-        <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg></div>
+      <div class="svc-benefit-card reveal">
+        <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg></div>
         <div class="svc-benefit-title">Experiencia comprobada</div>
         <div class="svc-benefit-desc">Más de 10 años representando empresas y personas naturales en Colombia.</div>
       </div>
-      <div class="svc-benefit-card">
+      <div class="svc-benefit-card reveal">
         <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
         <div class="svc-benefit-title">Respuesta ágil</div>
         <div class="svc-benefit-desc">Le contactamos en menos de 24 horas para entender su caso.</div>
       </div>
-      <div class="svc-benefit-card">
+      <div class="svc-benefit-card reveal">
         <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg></div>
         <div class="svc-benefit-title">Consulta inicial gratuita</div>
         <div class="svc-benefit-desc">Evaluamos su situación sin costo antes de iniciar cualquier proceso.</div>
       </div>
-      <div class="svc-benefit-card">
+      <div class="svc-benefit-card reveal">
         <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><path d="M12 22c-4.97 0-9-2.69-9-6v-1.5C3 11.46 7.03 9 12 9s9 2.46 9 5.5V16c0 3.31-4.03 6-9 6z"/><path d="M12 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg></div>
         <div class="svc-benefit-title">Acompañamiento transparente</div>
         <div class="svc-benefit-desc">Le mantenemos informado en cada etapa, sin sorpresas.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NUESTRO PROCESO -->
+<section class="svc-process">
+  <div class="svc-process-inner">
+    <div class="svc-section-eyebrow svc-section-eyebrow-light">Cómo trabajamos</div>
+    <h2 class="svc-section-title svc-section-title-light">Nuestro proceso en 4 pasos</h2>
+    <div class="svc-process-grid">
+      <div class="svc-step reveal">
+        <div class="svc-step-num">1</div>
+        <div class="svc-step-title">Consulta inicial</div>
+        <div class="svc-step-desc">Cuéntenos su caso por WhatsApp o el formulario de contacto, sin costo ni compromiso.</div>
+      </div>
+      <div class="svc-step reveal">
+        <div class="svc-step-num">2</div>
+        <div class="svc-step-title">Análisis del caso</div>
+        <div class="svc-step-desc">Evaluamos la viabilidad legal y definimos la mejor estrategia para su situación.</div>
+      </div>
+      <div class="svc-step reveal">
+        <div class="svc-step-num">3</div>
+        <div class="svc-step-title">Estrategia legal</div>
+        <div class="svc-step-desc">Actuamos: representación, negociación o litigio según lo que su caso requiera.</div>
+      </div>
+      <div class="svc-step reveal">
+        <div class="svc-step-num">4</div>
+        <div class="svc-step-title">Resultado y seguimiento</div>
+        <div class="svc-step-desc">Le mantenemos informado en cada etapa hasta resolver su caso.</div>
       </div>
     </div>
   </div>
@@ -639,39 +715,11 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
     </nav>
     <?php endif; ?>
 
-    <div class="svc-content-card">
-      <article class="ac"><?= $content ?></article>
+    <?php foreach ($contentBlocks as $bi => $block): ?>
+    <div class="svc-content-card reveal<?= $bi % 2 === 1 ? ' svc-content-card-alt' : '' ?>">
+      <article class="ac"><?= $block ?></article>
     </div>
-  </div>
-</section>
-
-<!-- NUESTRO PROCESO -->
-<section class="svc-process">
-  <div class="svc-process-inner">
-    <div class="svc-section-eyebrow svc-section-eyebrow-light">Cómo trabajamos</div>
-    <h2 class="svc-section-title svc-section-title-light">Nuestro proceso en 4 pasos</h2>
-    <div class="svc-process-grid">
-      <div class="svc-step">
-        <div class="svc-step-num">1</div>
-        <div class="svc-step-title">Consulta inicial</div>
-        <div class="svc-step-desc">Cuéntenos su caso por WhatsApp o el formulario de contacto, sin costo ni compromiso.</div>
-      </div>
-      <div class="svc-step">
-        <div class="svc-step-num">2</div>
-        <div class="svc-step-title">Análisis del caso</div>
-        <div class="svc-step-desc">Evaluamos la viabilidad legal y definimos la mejor estrategia para su situación.</div>
-      </div>
-      <div class="svc-step">
-        <div class="svc-step-num">3</div>
-        <div class="svc-step-title">Estrategia legal</div>
-        <div class="svc-step-desc">Actuamos: representación, negociación o litigio según lo que su caso requiera.</div>
-      </div>
-      <div class="svc-step">
-        <div class="svc-step-num">4</div>
-        <div class="svc-step-title">Resultado y seguimiento</div>
-        <div class="svc-step-desc">Le mantenemos informado en cada etapa hasta resolver su caso.</div>
-      </div>
-    </div>
+    <?php endforeach; ?>
   </div>
 </section>
 
@@ -682,7 +730,7 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
     <div class="svc-section-eyebrow">Preguntas frecuentes</div>
     <h2 class="svc-section-title">Dudas comunes sobre <?= $e($nombreSrv) ?></h2>
     <?php foreach ($faqs as $i => $faq): ?>
-    <div class="faq-item" id="faq-<?= $i ?>">
+    <div class="faq-item reveal" id="faq-<?= $i ?>">
       <button class="faq-q" onclick="toggleFaq(<?= $i ?>)">
         <span class="faq-q-text"><?= $e($faq['q'] ?? '') ?></span>
         <span class="faq-icon" id="faqicon-<?= $i ?>">+</span>
@@ -704,7 +752,7 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
     <h2 class="svc-section-title">Otros servicios en <?= $e($lineaNombre) ?></h2>
     <div class="svc-related-grid">
       <?php foreach ($related as $r): ?>
-      <a href="/<?= $linea ?>/<?= $e($r['slug']) ?>" class="svc-related-card">
+      <a href="/<?= $linea ?>/<?= $e($r['slug']) ?>" class="svc-related-card reveal">
         <div class="svc-related-img">
           <img src="<?= $e($r['imagen_url'] ?: 'https://litesco.com.co/images/hero-poster.webp') ?>" alt="<?= $e($r['h1']) ?>" width="400" height="150" loading="lazy">
         </div>
@@ -779,10 +827,12 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
   </div>
 </footer>
 
+<?php if (!$previewMode): ?>
 <!-- WhatsApp flotante -->
 <a href="https://wa.me/573132037572?text=Hola%2C+me+interesa+<?= urlencode($nombreSrv) ?>" class="wa-float" target="_blank" rel="noopener" aria-label="WhatsApp">
   <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
+<?php endif; ?>
 
 <!-- Scroll top -->
 <button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba">
@@ -843,6 +893,44 @@ document.querySelectorAll('a[href*="wa.me"], a[href="/contacto"]').forEach(funct
   }
   window.addEventListener('scroll', update, { passive: true });
   update();
+})();
+
+// ── Reveal on scroll + contadores animados
+(function(){
+  const revealEls = document.querySelectorAll('.reveal');
+  const counters = document.querySelectorAll('.svc-stat-num');
+
+  function animateCounter(el) {
+    const target = parseInt(el.getAttribute('data-count'), 10) || 0;
+    const suffix = el.getAttribute('data-suffix') || '';
+    const duration = 1200;
+    const start = performance.now();
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * eased) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  if ('IntersectionObserver' in window) {
+    const obs = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('in-view');
+        if (entry.target.classList.contains('svc-stat')) {
+          const num = entry.target.querySelector('.svc-stat-num');
+          if (num && !num.dataset.done) { num.dataset.done = '1'; animateCounter(num); }
+        }
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    revealEls.forEach(el => obs.observe(el));
+  } else {
+    revealEls.forEach(el => el.classList.add('in-view'));
+    counters.forEach(animateCounter);
+  }
 })();
 
 // ── TOC scroll
