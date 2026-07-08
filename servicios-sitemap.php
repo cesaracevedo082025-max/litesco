@@ -19,6 +19,9 @@ try {
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
+    // Publicar automáticamente servicios programados cuya fecha ya llegó
+    $pdo->exec("UPDATE servicios SET published = 1, status = 'publicado' WHERE status = 'programado' AND publish_at IS NOT NULL AND publish_at <= NOW()");
+
     $stmt = $pdo->query(
         "SELECT linea_negocio, slug, updated_at, created_at FROM servicios WHERE published = 1 ORDER BY updated_at DESC"
     );

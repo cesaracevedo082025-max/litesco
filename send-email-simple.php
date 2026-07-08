@@ -4,6 +4,8 @@
  * Envía email + guarda en MySQL (contacts + form_submissions)
  */
 
+require_once __DIR__ . '/lib/meta-capi.php';
+
 // ===== CONFIGURACIÓN =====
 $db_config = [
     'host'     => 'localhost',
@@ -50,6 +52,9 @@ $mensaje  = trim($data['mensaje'] ?? '');
 $empresa  = trim($data['empresa'] ?? '');
 $servicio = trim($data['servicio'] ?? '');
 $source   = !empty($empresa) || !empty($servicio) ? 'home' : 'contacto';
+// event_id generado en el navegador (ver ContactoPage.jsx/HomePage.jsx) para deduplicar
+// con el Pixel de navegador en Meta. Si no llega, se genera aquí como respaldo.
+$metaEventId = substr(trim((string) ($data['meta_event_id'] ?? '')), 0, 64) ?: generateMetaEventId('lead');
 
 // ===== VALIDACIÓN =====
 $errors = [];
@@ -150,6 +155,18 @@ try {
 
 } catch (Exception $e) {
     error_log('LITESCO Email Error: ' . $e->getMessage());
+}
+
+// ===== META CONVERSIONS API (Lead) =====
+// Solo metadatos no sensibles: nunca el mensaje del cliente ni datos del caso.
+if ($emailSent || $dbSaved) {
+    $pageUrl = $_SERVER['HTTP_REFERER'] ?? ('https://litesco.com.co/' . ($source === 'home' ? '' : $source));
+    fireMetaCapiEventAsync('Lead', $metaEventId, $pageUrl, [
+        'content_name' => $servicio ?: ($source === 'home' ? 'Formulario Inicio' : 'Formulario de contacto'),
+    ], [
+        'em' => $email ? sha256Lower($email) : null,
+        'ph' => $telefono ? sha256Lower(preg_replace('/\D/', '', $telefono)) : null,
+    ]);
 }
 
 // ===== RESPUESTA =====

@@ -25,6 +25,7 @@ import {
   FaBuilding,
   FaUsers
 } from 'react-icons/fa'
+import { generateEventId, fbqLead } from '@/components/ui/MetaPixel'
 
 const heroVideo = '/videos/fondoHome1.mp4'
 const imagenCorporativo = '/images/servicios/corporativo.webp'
@@ -176,21 +177,26 @@ const HomePage = () => {
     setIsSubmitting(true)
     setSubmitMessage({ type: '', text: '' })
 
+    const metaEventId = generateEventId('lead')
+
     try {
       const response = await fetch('https://www.litesco.com.co/send-email-simple.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, meta_event_id: metaEventId })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        setSubmitMessage({ 
-          type: 'success', 
-          text: data.message || '¡Mensaje enviado correctamente! Nos pondremos en contacto contigo pronto.' 
+        // El evento Lead lo confirma send-email-simple.php server-side; aquí solo
+        // disparamos el pixel de navegador con el mismo event_id para deduplicar.
+        fbqLead(metaEventId, formData.servicio || 'Formulario Inicio')
+        setSubmitMessage({
+          type: 'success',
+          text: data.message || '¡Mensaje enviado correctamente! Nos pondremos en contacto contigo pronto.'
         })
         setFormData({ nombre: '', empresa: '', email: '', telefono: '', servicio: '', mensaje: '' })
       } else {

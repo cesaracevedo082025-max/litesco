@@ -9,8 +9,8 @@
  */
 
 // ─── META PIXEL ID ───────────────────────────────────────────────────────────
-// Reemplazar con el Pixel ID real de Meta Business Suite
-define('META_PIXEL_ID', 'REEMPLAZAR_CON_TU_PIXEL_ID');
+require_once __DIR__ . '/lib/meta-capi.php';
+define('META_PIXEL_ID', env('META_PIXEL_ID', ''));
 
 // ─── CACHÉ: páginas de servicio publicadas (30 minutos) ───────────────────────
 header('Cache-Control: public, max-age=1800, stale-while-revalidate=3600');
@@ -44,23 +44,61 @@ if (!$slug || !in_array($linea, $lineasValidas)) {
     exit();
 }
 
+// ─── CACHÉ DE PÁGINA COMPLETA EN DISCO ────────────────────────────────────────
+// Equivalente a ISR fuera de Next.js: la primera visita construye el HTML contra
+// MySQL y lo guarda; las siguientes (dentro del TTL) se sirven directo del archivo,
+// sin tocar la base de datos. servicios-api.php invalida el archivo al guardar/
+// publicar/despublicar/eliminar el servicio. El tracking (Meta Pixel/CAPI) es
+// 100% client-side (ver más abajo), así que el HTML cacheado es idéntico y seguro
+// para cualquier visitante sin importar su cookie de consentimiento.
+$cacheDir     = __DIR__ . '/cache/servicios';
+$cacheKey     = preg_replace('/[^a-z0-9\-]/', '', "{$linea}-{$slug}");
+$cacheFile    = "$cacheDir/{$cacheKey}.html";
+$cacheTtlSecs = 1800; // igual al Cache-Control de arriba
+$cacheable    = empty($_GET['preview'] ?? ''); // nunca cachear/servir caché en vista previa
+
+if ($cacheable && is_file($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTtlSecs) {
+    header('X-Cache: HIT'); // diagnóstico: curl -I para confirmar que no se tocó MySQL
+    readfile($cacheFile);
+    exit();
+}
+header('X-Cache: MISS');
+if ($cacheable) {
+    ob_start();
+}
+
 // ─── BUSCAR SERVICIO ─────────────────────────────────────────────────────────
 $srv = null;
+$previewMode = false;
 try {
     $dsn = "mysql:host={$db_config['host']};dbname={$db_config['dbname']};charset={$db_config['charset']}";
     $pdo = new PDO($dsn, $db_config['user'], $db_config['password'], [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
-    $stmt = $pdo->prepare("SELECT * FROM servicios WHERE slug = ? AND linea_negocio = ? AND published = 1 LIMIT 1");
+
+    // Verificar si viene un token de admin para modo preview
+    $previewToken = $_GET['preview'] ?? '';
+    if ($previewToken) {
+        $ts = $pdo->prepare("SELECT id FROM servicios_sesiones WHERE token = ? AND expires_at > NOW()");
+        $ts->execute([$previewToken]);
+        $previewMode = (bool)$ts->fetch();
+    }
+
+    // Publicar automáticamente servicios programados cuya fecha ya llegó
+    $pdo->exec("UPDATE servicios SET published = 1, status = 'publicado' WHERE status = 'programado' AND publish_at IS NOT NULL AND publish_at <= NOW()");
+
+    $publishedClause = $previewMode ? '' : 'AND published = 1';
+    $stmt = $pdo->prepare("SELECT * FROM servicios WHERE slug = ? AND linea_negocio = ? $publishedClause LIMIT 1");
     $stmt->execute([$slug, $linea]);
     $srv = $stmt->fetch();
-} catch (PDOException $e) {}
+} catch (PDOException $e) {
+    error_log('[servicios-articulo] DB error: ' . $e->getMessage());
+}
 
 if (!$srv) {
     http_response_code(404);
-    readfile(__DIR__ . '/out/404/index.html') || readfile(__DIR__ . '/404.html') || http_response_code(404);
-    echo '<h1>Página no encontrada</h1><a href="/' . htmlspecialchars($linea) . '">Volver</a>';
+    readfile(__DIR__ . '/out/404.html') || readfile(__DIR__ . '/404.html') || http_response_code(404);
     exit();
 }
 
@@ -204,21 +242,31 @@ header('Content-Type: text/html; charset=UTF-8');
 <script type="application/ld+json"><?= json_encode($schemaFaq, $jEnc) ?></script>
 <?php endif; ?>
 <?php
-// Meta Pixel: solo si el usuario aceptó cookies (cookie establecida por ConsentProvider.jsx)
-$pixelConsent = ($_COOKIE['litesco_cookie_consent'] ?? '0') === '1';
-if ($pixelConsent && META_PIXEL_ID !== 'REEMPLAZAR_CON_TU_PIXEL_ID'):
+// Meta Pixel: bloque estático (mismo HTML para todos los visitantes, cache-safe —
+// esta página se sirve desde caché de archivo en servidor, ver más abajo). El
+// consentimiento y el event_id se resuelven en el navegador, nunca en PHP, para que
+// el mismo HTML cacheado sirva correctamente a cada visitante según su propia cookie.
+if (!$previewMode && META_PIXEL_ID !== ''):
     $pid = htmlspecialchars(META_PIXEL_ID, ENT_QUOTES, 'UTF-8');
     $pageName = htmlspecialchars($nombreSrv, ENT_QUOTES, 'UTF-8');
     $pageCategory = htmlspecialchars($lineaNombre, ENT_QUOTES, 'UTF-8');
 ?>
 <script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '<?= $pid ?>');
-fbq('track', 'PageView');
-fbq('track', 'ViewContent', {
-  content_name: '<?= $pageName ?>',
-  content_category: '<?= $pageCategory ?>'
-});
+(function(){
+  if (document.cookie.indexOf('litesco_cookie_consent=1') === -1) return;
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '<?= $pid ?>');
+  fbq('track', 'PageView');
+  var eventId = 'vc_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+  var contentName = '<?= $pageName ?>', contentCategory = '<?= $pageCategory ?>';
+  fbq('track', 'ViewContent', { content_name: contentName, content_category: contentCategory }, { eventID: eventId });
+  fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event: 'ViewContent', event_id: eventId, page_url: location.href, content_name: contentName, content_category: contentCategory }),
+    keepalive: true
+  }).catch(function(){});
+})();
 </script>
 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?= $pid ?>&ev=PageView&noscript=1" alt=""></noscript>
 <?php endif; ?>
@@ -403,6 +451,13 @@ a{text-decoration:none}
 </head>
 <body>
 <div class="read-progress" id="readProgress"></div>
+
+<?php if ($previewMode && !$srv['published']): ?>
+<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#d97706;color:#020617;text-align:center;padding:8px 16px;font-weight:800;font-size:13px;letter-spacing:.05em">
+  VISTA PREVIA — Este servicio está en borrador y no es visible al público. <a href="/cms-servicios" style="color:#020617;text-decoration:underline;margin-left:8px">Volver al CMS</a>
+</div>
+<div style="height:36px"></div>
+<?php endif; ?>
 
 <?php
 $_np = strtok($_SERVER['REQUEST_URI'], '?');
@@ -652,12 +707,20 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
   }
 })();
 
-// ── Meta Pixel: track Lead en clics de WhatsApp y formulario
+// ── Meta Pixel + CAPI: track Lead en clics de WhatsApp y formulario
+// (solo metadatos del servicio, nunca contenido de mensajes ni datos del caso)
 document.querySelectorAll('a[href*="wa.me"], a[href="/contacto"]').forEach(function(el) {
   el.addEventListener('click', function() {
-    if (window.fbq) {
-      fbq('track', 'Lead', { content_name: '<?= addslashes($nombreSrv) ?>' });
-    }
+    if (!window.fbq) return;
+    var eventId = 'lead_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+    var contentName = '<?= addslashes($nombreSrv) ?>';
+    fbq('track', 'Lead', { content_name: contentName }, { eventID: eventId });
+    fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'Lead', event_id: eventId, page_url: location.href, content_name: contentName }),
+      keepalive: true
+    }).catch(function () {});
   });
 });
 
@@ -715,3 +778,10 @@ function toggleFaq(i) {
 </script>
 </body>
 </html>
+<?php
+if ($cacheable) {
+    $html = ob_get_clean();
+    echo $html;
+    if (!is_dir($cacheDir)) @mkdir($cacheDir, 0755, true);
+    @file_put_contents($cacheFile, $html, LOCK_EX);
+}

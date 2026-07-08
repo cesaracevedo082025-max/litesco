@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { trackLead } from './MetaPixel'
 
 /**
  * Botón flotante de WhatsApp para LITESCO
@@ -63,7 +64,8 @@ const WhatsAppButton = () => {
     }
   ];
 
-  const handleCategoryClick = (message) => {
+  const handleCategoryClick = (message, categoryTitle) => {
+    trackLead(`WhatsApp flotante - ${categoryTitle}`);
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank');
   };
@@ -311,7 +313,7 @@ const WhatsAppButton = () => {
             <div
               key={category.id}
               style={styles.menuItem}
-              onClick={() => handleCategoryClick(category.message)}
+              onClick={() => handleCategoryClick(category.message, category.title)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateX(4px)';
                 e.currentTarget.style.borderColor = '#D4AF37';

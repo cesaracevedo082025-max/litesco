@@ -59,6 +59,8 @@ function ensureTables($pdo) {
             area_cobertura  VARCHAR(200) DEFAULT 'Bogotá, Colombia',
             cta_tipo        ENUM('whatsapp','formulario','ambos') DEFAULT 'whatsapp',
             published       TINYINT(1)   DEFAULT 0,
+            status          ENUM('borrador','programado','publicado') NOT NULL DEFAULT 'borrador',
+            publish_at      DATETIME NULL,
             created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
             updated_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -73,6 +75,44 @@ function ensureTables($pdo) {
             INDEX idx_expires (expires_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
+
+    // Migración defensiva: agregar status/publish_at si la tabla ya existía sin ellas
+    try {
+        $pdo->exec("ALTER TABLE servicios ADD COLUMN status ENUM('borrador','programado','publicado') NOT NULL DEFAULT 'borrador' AFTER published");
+        // Columna recién creada: heredar el estado desde el 'published' ya existente
+        $pdo->exec("UPDATE servicios SET status = 'publicado' WHERE published = 1");
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(), 'Duplicate column') === false) throw $e;
+    }
+    try {
+        $pdo->exec("ALTER TABLE servicios ADD COLUMN publish_at DATETIME NULL AFTER status");
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(), 'Duplicate column') === false) throw $e;
+    }
+}
+
+// Publica automáticamente los servicios programados cuya fecha ya llegó
+function promoteScheduled($pdo) {
+    $pdo->exec("UPDATE servicios SET published = 1, status = 'publicado' WHERE status = 'programado' AND publish_at IS NOT NULL AND publish_at <= NOW()");
+}
+
+// Borra el HTML cacheado de un servicio (ver caché de página completa en servicios-articulo.php)
+function invalidateServiceCache($linea, $slug) {
+    if (!$linea || !$slug) return;
+    $key  = preg_replace('/[^a-z0-9\-]/', '', "{$linea}-{$slug}");
+    $file = __DIR__ . "/cache/servicios/{$key}.html";
+    if (is_file($file)) @unlink($file);
+}
+
+// Adjunta parámetros de transformación ImageKit (tamaño Discover + auto formato) si faltan
+function normalizeImageKitUrl($url) {
+    $url = trim($url);
+    if ($url === '' || stripos($url, 'ik.imagekit.io') === false) return $url;
+    $parts = parse_url($url);
+    parse_str($parts['query'] ?? '', $q);
+    if (isset($q['tr'])) return $url;
+    $sep = (!empty($parts['query'])) ? '&' : '?';
+    return $url . $sep . 'tr=w-1200,h-630,f-auto';
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
@@ -121,6 +161,7 @@ if ($method === 'GET') {
 try {
     $pdo = getDb($db_config);
     ensureTables($pdo);
+    promoteScheduled($pdo);
 } catch (PDOException $e) {
     err('Error de base de datos: ' . $e->getMessage(), 500);
 }
@@ -182,45 +223,69 @@ if ($action === 'save') {
     $h1            = trim($body['h1'] ?? '');
     $content       = $body['content'] ?? '';
     $faqs          = json_encode($body['faqs'] ?? [], JSON_UNESCAPED_UNICODE);
-    $imagen_url    = trim($body['imagen_url'] ?? '');
+    $imagen_url    = normalizeImageKitUrl($body['imagen_url'] ?? '');
     $imagen_alt    = trim($body['imagen_alt'] ?? '');
     $nombre_srv    = trim($body['nombre_servicio'] ?? '');
     $area_cob      = trim($body['area_cobertura'] ?? 'Bogotá, Colombia');
     $cta_tipo      = $body['cta_tipo'] ?? 'whatsapp';
-    $published     = intval($body['published'] ?? 0);
+    $status        = $body['status'] ?? (!empty($body['published']) ? 'publicado' : 'borrador');
+    $publish_at    = trim($body['publish_at'] ?? '');
+    $publish_at    = $publish_at !== '' ? date('Y-m-d H:i:s', strtotime($publish_at)) : null;
 
     if (!in_array($linea, ['litis','corporativo','recuperacion'])) err('Línea de negocio inválida');
     if (!$slug) err('El slug es requerido');
     if (!$h1)   err('El título H1 es requerido');
+    if ($imagen_url !== '' && $imagen_alt === '') err('El texto ALT es obligatorio cuando hay una imagen');
+    if (!in_array($status, ['borrador','programado','publicado'])) err('Estado inválido');
+    if ($status === 'programado' && !$publish_at) err('La fecha de publicación programada es requerida');
 
-    if ($id) {
-        $stmt = $pdo->prepare("
-            UPDATE servicios SET
-                linea_negocio=?, subcategoria=?, slug=?, seo_title=?, meta_desc=?,
-                resumen_rapido=?, h1=?, content=?, faqs=?,
-                imagen_url=?, imagen_alt=?, nombre_servicio=?, area_cobertura=?,
-                cta_tipo=?, published=?
-            WHERE id=?
-        ");
-        $stmt->execute([$linea,$subcategoria,$slug,$seo_title,$meta_desc,
-            $resumen,$h1,$content,$faqs,
-            $imagen_url,$imagen_alt,$nombre_srv,$area_cob,
-            $cta_tipo,$published,$id]);
-        ok(['id' => $id, 'slug' => $slug]);
-    } else {
-        $stmt = $pdo->prepare("
-            INSERT INTO servicios
-                (linea_negocio,subcategoria,slug,seo_title,meta_desc,
-                 resumen_rapido,h1,content,faqs,
-                 imagen_url,imagen_alt,nombre_servicio,area_cobertura,
-                 cta_tipo,published)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        ");
-        $stmt->execute([$linea,$subcategoria,$slug,$seo_title,$meta_desc,
-            $resumen,$h1,$content,$faqs,
-            $imagen_url,$imagen_alt,$nombre_srv,$area_cob,
-            $cta_tipo,$published]);
-        ok(['id' => $pdo->lastInsertId(), 'slug' => $slug]);
+    // 'published' queda como espejo simple de status para las lecturas públicas existentes
+    $published = ($status === 'publicado') ? 1 : 0;
+
+    try {
+        if ($id) {
+            // Recuperar línea/slug previos: si cambiaron, hay que invalidar también el caché viejo
+            $prev = $pdo->prepare("SELECT linea_negocio, slug FROM servicios WHERE id = ?");
+            $prev->execute([$id]);
+            $prevRow = $prev->fetch();
+
+            $stmt = $pdo->prepare("
+                UPDATE servicios SET
+                    linea_negocio=?, subcategoria=?, slug=?, seo_title=?, meta_desc=?,
+                    resumen_rapido=?, h1=?, content=?, faqs=?,
+                    imagen_url=?, imagen_alt=?, nombre_servicio=?, area_cobertura=?,
+                    cta_tipo=?, published=?, status=?, publish_at=?
+                WHERE id=?
+            ");
+            $stmt->execute([$linea,$subcategoria,$slug,$seo_title,$meta_desc,
+                $resumen,$h1,$content,$faqs,
+                $imagen_url,$imagen_alt,$nombre_srv,$area_cob,
+                $cta_tipo,$published,$status,$publish_at,$id]);
+
+            if ($prevRow) invalidateServiceCache($prevRow['linea_negocio'], $prevRow['slug']);
+            invalidateServiceCache($linea, $slug);
+            ok(['id' => $id, 'slug' => $slug]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO servicios
+                    (linea_negocio,subcategoria,slug,seo_title,meta_desc,
+                     resumen_rapido,h1,content,faqs,
+                     imagen_url,imagen_alt,nombre_servicio,area_cobertura,
+                     cta_tipo,published,status,publish_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ");
+            $stmt->execute([$linea,$subcategoria,$slug,$seo_title,$meta_desc,
+                $resumen,$h1,$content,$faqs,
+                $imagen_url,$imagen_alt,$nombre_srv,$area_cob,
+                $cta_tipo,$published,$status,$publish_at]);
+            ok(['id' => $pdo->lastInsertId(), 'slug' => $slug]);
+        }
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+            err('Ya existe un servicio con ese slug. Elige otro.', 409);
+        }
+        error_log('[servicios-api save] ' . $e->getMessage());
+        err('Error al guardar el servicio', 500);
     }
 }
 
@@ -228,17 +293,41 @@ if ($action === 'save') {
 if ($action === 'delete') {
     $id = intval($body['id'] ?? 0);
     if (!$id) err('ID requerido');
-    $stmt = $pdo->prepare("DELETE FROM servicios WHERE id = ?");
-    $stmt->execute([$id]);
-    ok();
+    try {
+        $row = $pdo->prepare("SELECT linea_negocio, slug FROM servicios WHERE id = ?");
+        $row->execute([$id]);
+        $row = $row->fetch();
+
+        $stmt = $pdo->prepare("DELETE FROM servicios WHERE id = ?");
+        $stmt->execute([$id]);
+
+        if ($row) invalidateServiceCache($row['linea_negocio'], $row['slug']);
+        ok();
+    } catch (PDOException $e) {
+        error_log('[servicios-api delete] ' . $e->getMessage());
+        err('Error al eliminar el servicio', 500);
+    }
 }
 
-// POST toggle_publish
+// POST toggle_publish — alterna entre 'publicado' y 'borrador' (no aplica a 'programado')
 if ($action === 'toggle_publish') {
     $id = intval($body['id'] ?? 0);
     if (!$id) err('ID requerido');
-    $pdo->prepare("UPDATE servicios SET published = NOT published WHERE id = ?")->execute([$id]);
-    ok();
+    try {
+        $stmt = $pdo->prepare("SELECT published, linea_negocio, slug FROM servicios WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row) err('Servicio no encontrado', 404);
+        $newPublished = $row['published'] ? 0 : 1;
+        $newStatus    = $newPublished ? 'publicado' : 'borrador';
+        $pdo->prepare("UPDATE servicios SET published = ?, status = ?, publish_at = NULL WHERE id = ?")
+            ->execute([$newPublished, $newStatus, $id]);
+        invalidateServiceCache($row['linea_negocio'], $row['slug']);
+        ok(['published' => $newPublished, 'status' => $newStatus]);
+    } catch (PDOException $e) {
+        error_log('[servicios-api toggle_publish] ' . $e->getMessage());
+        err('Error al cambiar el estado', 500);
+    }
 }
 
 err('Acción desconocida: ' . $action);

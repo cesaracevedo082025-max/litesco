@@ -77,6 +77,8 @@ const EMPTY_FORM = {
   area_cobertura: 'Bogotá, Colombia',
   cta_tipo: 'whatsapp',
   published: 0,
+  status: 'borrador',
+  publish_at: '',
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -140,7 +142,7 @@ function LoginScreen({ onLogin }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // LISTA DE SERVICIOS
 // ─────────────────────────────────────────────────────────────────────────────
-function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading }) {
+function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading, token }) {
   const [filtro, setFiltro] = useState('')
   const [linea, setLinea] = useState('')
 
@@ -150,6 +152,16 @@ function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading }) 
   )
 
   const lineaColor = { litis: '#ef4444', corporativo: '#3b82f6', recuperacion: '#10b981' }
+
+  const statusBadge = (srv) => {
+    const status = srv.status || (srv.published ? 'publicado' : 'borrador')
+    if (status === 'programado') {
+      const fecha = srv.publish_at ? new Date(srv.publish_at.replace(' ', 'T')).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
+      return { label: `Programado${fecha ? ' · ' + fecha : ''}`, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)' }
+    }
+    if (status === 'publicado') return { label: 'Publicado', color: '#10b981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.3)' }
+    return { label: 'Borrador', color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' }
+  }
 
   return (
     <div>
@@ -186,8 +198,16 @@ function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading }) 
                 {' / '}<span>{srv.slug}</span>
               </div>
             </div>
+            {(() => {
+              const b = statusBadge(srv)
+              return (
+                <span style={{ background: b.bg, border: `1px solid ${b.border}`, color: b.color, borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  {b.label}
+                </span>
+              )
+            })()}
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-              <button onClick={() => window.open(`/${srv.linea_negocio}/${srv.slug}`, '_blank')} title="Ver página"
+              <button onClick={() => window.open(`/${srv.linea_negocio}/${srv.slug}?preview=${token}`, '_blank')} title="Ver página"
                 style={{ background: '#f8fafc', border: '1px solid #e8edf4', borderRadius: 8, padding: '7px 10px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>
                 <FaEye />
               </button>
@@ -245,8 +265,11 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
     if (paso === 1) return form.linea_negocio && form.subcategoria
     if (paso === 2) return form.seo_title && form.slug && form.meta_desc
     if (paso === 4) return form.h1
+    if (paso === 5) return !form.imagen_url || !!form.imagen_alt
     return true
   }
+
+  const canSave = () => canNext() && (form.status !== 'programado' || !!form.publish_at)
 
   const schemaPreview = {
     '@context': 'https://schema.org',
@@ -459,14 +482,17 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
             <div style={field}>
               <label style={label}>URL de la imagen (ImageKit)</label>
               <input value={form.imagen_url} onChange={e => set('imagen_url', e.target.value)}
-                placeholder="https://ik.imagekit.io/litesco/servicios/proceso-ejecutivo.webp?tr=w-1200,h-630,f-auto"
+                placeholder="https://ik.imagekit.io/litesco/servicios/proceso-ejecutivo.webp"
                 style={inp} />
-              <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>Añade ?tr=w-1200,h-630,f-auto para que ImageKit entregue el tamaño exacto requerido.</div>
+              <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>Al guardar, el sistema agrega automáticamente ?tr=w-1200,h-630,f-auto (tamaño Discover, WebP/AVIF) si la URL es de ImageKit y no lo trae.</div>
             </div>
             <div style={field}>
-              <label style={label}>Texto alternativo (ALT) *</label>
+              <label style={label}>Texto alternativo (ALT) {form.imagen_url ? '*' : ''}</label>
               <input value={form.imagen_alt} onChange={e => set('imagen_alt', e.target.value)}
                 placeholder="Abogado especialista en proceso ejecutivo en oficina de Bogotá" style={inp} />
+              {form.imagen_url && !form.imagen_alt && (
+                <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>Obligatorio cuando hay una imagen.</div>
+              )}
             </div>
             {form.imagen_url && (
               <div style={{ marginTop: 8 }}>
@@ -522,14 +548,34 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
                 ))}
               </div>
             </div>
-            <div style={{ ...field, display: 'flex', alignItems: 'center', gap: 14, background: '#020617', border: '1px solid #1e293b', borderRadius: 12, padding: '16px 20px' }}>
-              <button onClick={() => set('published', form.published ? 0 : 1)}
-                style={{ width: 44, height: 24, borderRadius: 12, background: form.published ? '#10b981' : '#1e293b', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
-                <span style={{ position: 'absolute', top: 2, left: form.published ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
-              </button>
-              <div>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{form.published ? 'Publicado' : 'Borrador'}</div>
-                <div style={{ color: '#475569', fontSize: 12 }}>{form.published ? 'Visible en el sitio y en Google.' : 'No visible. Puedes guardar y publicar después.'}</div>
+            <div style={field}>
+              <label style={label}>Estado de publicación</label>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {[
+                  { id: 'borrador', label: 'Borrador', sub: 'No visible' },
+                  { id: 'programado', label: 'Programado', sub: 'Se publica solo' },
+                  { id: 'publicado', label: 'Publicado', sub: 'Visible ahora' },
+                ].map(s => (
+                  <button key={s.id} onClick={() => set('status', s.id)}
+                    style={{ flex: '1 1 140px', border: `2px solid ${form.status === s.id ? '#f59e0b' : '#1e293b'}`, borderRadius: 12, padding: '12px 16px', background: form.status === s.id ? 'rgba(245,158,11,0.1)' : '#020617', color: form.status === s.id ? '#f59e0b' : '#475569', cursor: 'pointer', transition: 'all .2s', textAlign: 'left' }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{s.label}</div>
+                    <div style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>{s.sub}</div>
+                  </button>
+                ))}
+              </div>
+              {form.status === 'programado' && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={label}>Fecha y hora de publicación *</label>
+                  <input type="datetime-local" value={form.publish_at} onChange={e => set('publish_at', e.target.value)} style={inp} />
+                  {!form.publish_at && (
+                    <div style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>Requerida para programar la publicación.</div>
+                  )}
+                </div>
+              )}
+              <div style={{ background: '#020617', border: '1px solid #1e293b', borderRadius: 12, padding: '14px 18px', marginTop: 14, fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
+                {form.status === 'borrador' && 'No visible en el sitio ni en Google. Puedes guardar y publicar después.'}
+                {form.status === 'programado' && 'Se guarda oculto y se publica automáticamente en la fecha indicada (la primera visita o revisión del sitemap después de esa fecha la activa).'}
+                {form.status === 'publicado' && 'Visible en el sitio y en Google inmediatamente al guardar.'}
               </div>
             </div>
             {/* Resumen */}
@@ -541,6 +587,7 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
                 ['Título SEO', form.seo_title],
                 ['FAQs', `${form.faqs.length} preguntas`],
                 ['CTA', form.cta_tipo],
+                ['Estado', form.status === 'programado' ? `Programado · ${form.publish_at || 'sin fecha'}` : form.status],
               ].map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 13 }}>
                   <span style={{ color: '#475569', minWidth: 90 }}>{k}</span>
@@ -565,9 +612,9 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
             Siguiente <FaArrowRight />
           </button>
         ) : (
-          <button onClick={() => onSave(form)} disabled={saving}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg,#10b981,#059669)', border: 'none', borderRadius: 11, padding: '10px 24px', color: '#fff', fontWeight: 800, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer' }}>
-            <FaSave /> {saving ? 'Guardando…' : form.published ? 'Publicar servicio' : 'Guardar borrador'}
+          <button onClick={() => canSave() && onSave(form)} disabled={saving || !canSave()}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, background: (saving || !canSave()) ? '#1e293b' : 'linear-gradient(135deg,#10b981,#059669)', border: 'none', borderRadius: 11, padding: '10px 24px', color: (saving || !canSave()) ? '#475569' : '#fff', fontWeight: 800, fontSize: 13, cursor: (saving || !canSave()) ? 'not-allowed' : 'pointer' }}>
+            <FaSave /> {saving ? 'Guardando…' : form.status === 'publicado' ? 'Publicar servicio' : form.status === 'programado' ? 'Programar publicación' : 'Guardar borrador'}
           </button>
         )}
       </div>
@@ -839,6 +886,7 @@ export default function ServiciosCMSPage() {
                 onDelete={handleDelete}
                 onToggle={handleToggle}
                 loading={loading}
+                token={token}
               />
             </>
           )}

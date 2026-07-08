@@ -18,6 +18,7 @@ import {
   FaExclamationCircle,
   FaBuilding
 } from 'react-icons/fa'
+import { generateEventId, fbqLead } from '@/components/ui/MetaPixel'
 
 const heroImage = '/images/fondos/fondoContacto.webp'
 
@@ -98,21 +99,27 @@ const ContactoPage = () => {
     setIsSubmitting(true)
     setSubmitMessage({ type: '', text: '' })
 
+    const metaEventId = generateEventId('lead')
+
     try {
       const response = await fetch('https://www.litesco.com.co/send-email-simple.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, meta_event_id: metaEventId })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        setSubmitMessage({ 
-          type: 'success', 
-          text: data.message || '¡Mensaje enviado correctamente! Nos pondremos en contacto contigo pronto.' 
+        // El evento Lead en Meta lo confirma el servidor (send-email-simple.php) tras
+        // guardar el contacto; aquí solo disparamos el pixel de navegador con el mismo
+        // event_id para que Meta deduplique ambas señales como un único Lead.
+        fbqLead(metaEventId, 'Formulario de contacto')
+        setSubmitMessage({
+          type: 'success',
+          text: data.message || '¡Mensaje enviado correctamente! Nos pondremos en contacto contigo pronto.'
         })
         setFormData({ nombre: '', email: '', telefono: '', mensaje: '' })
       } else {

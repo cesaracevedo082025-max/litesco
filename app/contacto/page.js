@@ -11,21 +11,13 @@ export const metadata = {
   },
 }
 
-const breadcrumbSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://litesco.com.co' },
-    { '@type': 'ListItem', position: 2, name: 'Contacto', item: 'https://litesco.com.co/contacto' },
-  ],
-}
-
 import ContactoPage from '@/views/ContactoPage'
+import JsonLd, { buildBreadcrumbSchema } from '@/components/seo/JsonLd'
 
 export default function Page() {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <JsonLd data={buildBreadcrumbSchema([{ name: 'Contacto', url: 'https://litesco.com.co/contacto' }])} />
       <ContactoPage />
     </>
   )

@@ -4,7 +4,8 @@
  * Con tabla de contenidos, fecha en español y botones de navegación
  */
 // ===== META PIXEL ID =====
-define('META_PIXEL_ID', 'REEMPLAZAR_CON_TU_PIXEL_ID');
+require_once __DIR__ . '/lib/meta-capi.php';
+define('META_PIXEL_ID', env('META_PIXEL_ID', ''));
 
 // ===== CACHÉ: artículos publicados (30 minutos) =====
 header('Cache-Control: public, max-age=1800, stale-while-revalidate=3600');
@@ -164,7 +165,7 @@ header('Content-Type: text/html; charset=UTF-8');
 <meta name="twitter:image" content="<?= $image ?>">
 <link rel="icon" href="/favicon.webp" type="image/webp">
 <script type="application/ld+json"><?= json_encode([
-    '@context'=>'https://schema.org','@type'=>'NewsArticle',
+    '@context'=>'https://schema.org','@type'=>'BlogPosting',
     'headline'=>$article['seo_title']?:$article['title'],
     'description'=>$article['meta_desc']?:$article['excerpt'],
     'image'=>[
@@ -174,11 +175,21 @@ header('Content-Type: text/html; charset=UTF-8');
         'width'=>1200,
         'height'=>630,
     ],
-    'author'=>[
-        '@type'=>'Organization',
-        'name'=>$article['author']??'Equipo LITESCO',
-        'url'=>'https://litesco.com.co',
-    ],
+    'author'=>(function() use ($article) {
+        $authorName = trim($article['author'] ?? '');
+        if ($authorName !== '' && $authorName !== 'Equipo LITESCO') {
+            return [
+                '@type'=>'Person',
+                'name'=>$authorName,
+                'worksFor'=>['@type'=>'Organization','name'=>'LITESCO','url'=>'https://litesco.com.co'],
+            ];
+        }
+        return [
+            '@type'=>'Organization',
+            'name'=>$authorName !== '' ? $authorName : 'Equipo LITESCO',
+            'url'=>'https://litesco.com.co',
+        ];
+    })(),
     'publisher'=>[
         '@type'=>'Organization',
         'name'=>'LITESCO',
@@ -263,15 +274,27 @@ header('Content-Type: text/html; charset=UTF-8');
     ],
 ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?></script>
 <?php
-$pixelConsent = ($_COOKIE['litesco_cookie_consent'] ?? '0') === '1';
-if ($pixelConsent && META_PIXEL_ID !== 'REEMPLAZAR_CON_TU_PIXEL_ID'):
+// Bloque estático: consentimiento y event_id se resuelven en el navegador (no en PHP)
+// para que el mismo HTML sirva correctamente sin importar cachés intermedias futuras.
+if (META_PIXEL_ID !== ''):
     $pid = htmlspecialchars(META_PIXEL_ID, ENT_QUOTES, 'UTF-8');
 ?>
 <script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '<?= $pid ?>');
-fbq('track', 'PageView');
-fbq('track', 'ViewContent', { content_name: '<?= addslashes($title) ?>', content_category: '<?= addslashes($catName) ?>' });
+(function(){
+  if (document.cookie.indexOf('litesco_cookie_consent=1') === -1) return;
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '<?= $pid ?>');
+  fbq('track', 'PageView');
+  var eventId = 'vc_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+  var contentName = '<?= addslashes($title) ?>', contentCategory = '<?= addslashes($catName) ?>';
+  fbq('track', 'ViewContent', { content_name: contentName, content_category: contentCategory }, { eventID: eventId });
+  fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event: 'ViewContent', event_id: eventId, page_url: location.href, content_name: contentName, content_category: contentCategory }),
+    keepalive: true
+  }).catch(function(){});
+})();
 </script>
 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=<?= $pid ?>&ev=PageView&noscript=1" alt=""></noscript>
 <?php endif; ?>
@@ -804,14 +827,6 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
 
 <!-- BREADCRUMB -->
 <div style="background:#f8fafc">
-<script type="application/ld+json"><?= json_encode([
-  '@context'=>'https://schema.org','@type'=>'BreadcrumbList',
-  'itemListElement'=>[
-    ['@type'=>'ListItem','position'=>1,'name'=>'Inicio','item'=>'https://www.litesco.com.co'],
-    ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>'https://www.litesco.com.co/blog'],
-    ['@type'=>'ListItem','position'=>3,'name'=>$article['title'],'item'=>$canonical],
-  ]
-],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?></script>
 <nav class="breadcrumb" aria-label="Breadcrumb">
   <a href="/blog">Blog</a>
   <span class="sep">›</span>
@@ -1197,6 +1212,23 @@ function copyArticleLink(){
     setTimeout(()=>{ lbl.textContent = 'Copiar enlace'; }, 2500);
   });
 }
+
+// ── Meta Pixel + CAPI: track Lead en clics de WhatsApp y contacto
+// (solo metadatos del artículo, nunca contenido de mensajes ni datos del caso)
+document.querySelectorAll('a[href*="wa.me"], a[href="/contacto"]').forEach(function(el) {
+  el.addEventListener('click', function() {
+    if (!window.fbq) return;
+    var eventId = 'lead_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+    var contentName = '<?= addslashes($title) ?>';
+    fbq('track', 'Lead', { content_name: contentName }, { eventID: eventId });
+    fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'Lead', event_id: eventId, page_url: location.href, content_name: contentName }),
+      keepalive: true
+    }).catch(function () {});
+  });
+});
 </script>
 </body>
 </html>
