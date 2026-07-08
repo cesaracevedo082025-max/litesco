@@ -252,9 +252,9 @@ header('Content-Type: text/html; charset=UTF-8');
     'hasOfferCatalog'=>[
         '@type'=>'OfferCatalog','name'=>'Servicios Jurídicos LITESCO',
         'itemListElement'=>[
-            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Litis – Litigio Estratégico','description'=>'Representación legal en procesos civiles, comerciales y administrativos']],
-            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Corporativo – Asesoría Empresarial','description'=>'Constitución de empresas, contratos y cumplimiento normativo']],
-            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Recuperación de Cartera BPO','description'=>'Gestión integral de cobranza prejudicial y judicial']],
+            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Litis – Litigio Estratégico','description'=>'Representación legal en procesos civiles, comerciales y administrativos','url'=>'https://litesco.com.co/litis','telephone'=>'+573132037572','priceRange'=>'$$','image'=>'https://litesco.com.co/images/hero-poster.webp','address'=>['@type'=>'PostalAddress','streetAddress'=>'CRA 7 #17-01','addressLocality'=>'Bogotá','addressRegion'=>'Bogotá D.C.','postalCode'=>'110321','addressCountry'=>'CO']]],
+            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Corporativo – Asesoría Empresarial','description'=>'Constitución de empresas, contratos y cumplimiento normativo','url'=>'https://litesco.com.co/corporativo','telephone'=>'+573132037572','priceRange'=>'$$','image'=>'https://litesco.com.co/images/hero-poster.webp','address'=>['@type'=>'PostalAddress','streetAddress'=>'CRA 7 #17-01','addressLocality'=>'Bogotá','addressRegion'=>'Bogotá D.C.','postalCode'=>'110321','addressCountry'=>'CO']]],
+            ['@type'=>'Offer','itemOffered'=>['@type'=>'LegalService','name'=>'Recuperación de Cartera BPO','description'=>'Gestión integral de cobranza prejudicial y judicial','url'=>'https://litesco.com.co/recuperacion','telephone'=>'+573132037572','priceRange'=>'$$','image'=>'https://litesco.com.co/images/hero-poster.webp','address'=>['@type'=>'PostalAddress','streetAddress'=>'CRA 7 #17-01','addressLocality'=>'Bogotá','addressRegion'=>'Bogotá D.C.','postalCode'=>'110321','addressCountry'=>'CO']]],
         ],
     ],
     'openingHoursSpecification'=>[
