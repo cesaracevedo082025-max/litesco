@@ -76,6 +76,17 @@ $author      = $e($article['author'] ?? 'Equipo LITESCO');
 $date        = $article['date'] ?? '';
 $canonical   = "https://litesco.com.co/blog/{$slug}";
 
+// Fecha ISO 8601 con zona horaria (requerida por Google para datePublished/dateModified)
+function toIso8601Bogota($dateStr) {
+    if (empty($dateStr)) return '';
+    try {
+        $dt = new DateTime($dateStr, new DateTimeZone('America/Bogota'));
+        return $dt->format('c');
+    } catch (Exception $e) {
+        return '';
+    }
+}
+
 // ===== FECHA EN ESPAÑOL =====
 $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 $dateFormatted = '';
@@ -196,8 +207,8 @@ header('Content-Type: text/html; charset=UTF-8');
         'url'=>'https://litesco.com.co',
         'logo'=>['@type'=>'ImageObject','url'=>'https://litesco.com.co/favicon.webp','width'=>512,'height'=>512],
     ],
-    'datePublished'=>$date,
-    'dateModified'=>$article['updated_at']??$date,
+    'datePublished'=>toIso8601Bogota($date),
+    'dateModified'=>toIso8601Bogota($article['updated_at'] ?? $date),
     'inLanguage'=>'es-CO',
     'wordCount'=>$wordCount,
     'articleSection'=>$catName,
