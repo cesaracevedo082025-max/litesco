@@ -69,6 +69,8 @@ $catName = $categories[$article['category'] ?? ''] ?? 'Artículo';
 // ===== DATOS SEO =====
 $e = function($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); };
 $title       = $e($article['seo_title'] ?: $article['title']);
+// Evita "... | LITESCO | LITESCO" si el seo_title ya incluye la marca
+$titleSuffix = (stripos($title, 'LITESCO') === false) ? ' | LITESCO' : '';
 $description = $e($article['meta_desc'] ?: $article['excerpt']);
 $keyword     = $e($article['keyword'] ?? '');
 $image       = $e($article['image'] ?? '');
@@ -157,7 +159,7 @@ header('Content-Type: text/html; charset=UTF-8');
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= $title ?> | LITESCO</title>
+<title><?= $title ?><?= $titleSuffix ?></title>
 <meta name="description" content="<?= $description ?>">
 <?php if ($keyword): ?><meta name="keywords" content="<?= $keyword ?>"><?php endif; ?>
 <meta name="author" content="<?= $author ?>">

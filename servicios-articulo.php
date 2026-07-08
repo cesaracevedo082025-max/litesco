@@ -113,6 +113,7 @@ $lineasNombres = [
 $lineaNombre = $lineasNombres[$linea] ?? ucfirst($linea);
 
 $seoTitle     = $srv['seo_title']      ?: $srv['h1'];
+$seoTitleSuffix = (stripos($seoTitle, 'LITESCO') === false) ? ' | LITESCO' : '';
 $metaDesc     = $srv['meta_desc']      ?: '';
 $h1           = $srv['h1']             ?: '';
 $content      = $srv['content']        ?: '';
@@ -225,7 +226,7 @@ header('Content-Type: text/html; charset=UTF-8');
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= $e($seoTitle) ?> | LITESCO</title>
+<title><?= $e($seoTitle) ?><?= $seoTitleSuffix ?></title>
 <meta name="description" content="<?= $e($metaDesc) ?>">
 <meta name="author" content="LITESCO S.A.S.">
 <link rel="canonical" href="<?= $canonical ?>">
