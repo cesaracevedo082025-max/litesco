@@ -102,6 +102,14 @@ if (!$srv) {
     exit();
 }
 
+// ─── SERVICIOS RELACIONADOS (misma línea de negocio) ──────────────────────────
+$related = [];
+try {
+    $stmt = $pdo->prepare("SELECT h1, slug, nombre_servicio, meta_desc, imagen_url FROM servicios WHERE linea_negocio = ? AND slug != ? AND published = 1 ORDER BY updated_at DESC LIMIT 3");
+    $stmt->execute([$linea, $slug]);
+    $related = $stmt->fetchAll();
+} catch (PDOException $e) {}
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 $e = fn($s) => htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8');
 
@@ -144,10 +152,6 @@ $content = preg_replace_callback('/<h2([^>]*)>/i', function($m) use (&$tocCounte
     $tocCounter++;
     return "<h2{$m[1]} id=\"{$id}\">";
 }, $content);
-
-// Tiempo de lectura
-$wc = str_word_count(strip_tags($content . ' ' . $resumen));
-$readTime = max(2, ceil($wc / 250));
 
 // ─── JSON-LD SCHEMAS ─────────────────────────────────────────────────────────
 $schemaOrg = [
@@ -338,72 +342,99 @@ a{text-decoration:none}
 .bc-sep{color:#cbd5e1;font-size:10px}
 .bc-cur{color:#0A1628;font-weight:600}
 
-/* ── HERO ─────────────────────────────────────────── */
-.hero{position:relative;min-height:420px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;background:#0A1628}
-.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
-.hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,22,40,1) 0%,rgba(10,22,40,0.75) 40%,rgba(10,22,40,0.35) 100%)}
-.hero-content{position:relative;z-index:2;padding:clamp(32px,6vw,72px) clamp(20px,6vw,80px);max-width:860px}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:5px 14px;margin-bottom:16px}
-.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0}
-.hero-badge-text{font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1.5px;font-family:'Montserrat',sans-serif}
-.hero h1{color:#fff;font-size:clamp(1.6rem,4vw,3rem);font-weight:900;line-height:1.12;margin:0 0 16px;letter-spacing:-0.5px;font-family:'Montserrat',sans-serif;text-shadow:0 2px 20px rgba(2,6,23,0.5)}
-.hero-line{width:48px;height:3px;background:linear-gradient(to right,#f59e0b,#d97706);border-radius:2px}
-.hero-meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:20px}
-.hero-meta-item{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.6);font-size:12.5px}
-.hero-meta-item svg{fill:#f59e0b;flex-shrink:0}
-.hero-back{position:absolute;top:76px;left:clamp(20px,6vw,80px);z-index:4;display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,0.75);font-size:13px;font-weight:700;transition:color .2s;text-decoration:none}
-.hero-back:hover{color:#fff}
-.hero-back-icon{width:32px;height:32px;border-radius:50%;background:rgba(245,158,11,0.15);border:1.5px solid rgba(245,158,11,0.4);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
-.hero-back:hover .hero-back-icon{background:rgba(245,158,11,0.28);border-color:#f59e0b;transform:translateX(-2px)}
-@media(max-width:600px){.hero{min-height:360px}.hero-content{padding:24px 18px 28px}}
+/* ── SECCIÓN: eyebrow + título genéricos ─────────── */
+.svc-section-eyebrow{font-size:11px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:2px;font-family:'Montserrat',sans-serif;margin-bottom:10px}
+.svc-section-eyebrow-light{color:#f59e0b}
+.svc-section-title{color:#0A1628;font-size:clamp(1.35rem,3vw,1.9rem);font-weight:900;letter-spacing:-0.02em;margin:0 0 36px;font-family:'Montserrat',sans-serif}
+.svc-section-title-light{color:#fff}
 
-/* ── LAYOUT PRINCIPAL ────────────────────────────── */
-.main{max-width:1300px;margin:0 auto;padding:48px 24px 60px;display:grid;grid-template-columns:1fr 340px;gap:40px;align-items:start}
-@media(max-width:1024px){.main{grid-template-columns:1fr 300px;gap:28px}}
-@media(max-width:900px){.main{grid-template-columns:1fr;padding:28px 18px 40px}}
+/* ── HERO (split, landing) ────────────────────────── */
+.svc-hero{background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);padding:clamp(28px,5vw,48px) 0 clamp(40px,6vw,64px)}
+.svc-hero-inner{max-width:1300px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:1.1fr 0.9fr;gap:clamp(28px,5vw,56px);align-items:center}
+@media(max-width:900px){.svc-hero-inner{grid-template-columns:1fr;gap:28px}}
+.svc-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.28);border-radius:20px;padding:6px 14px;margin-bottom:18px;font-size:11.5px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:1.2px;font-family:'Montserrat',sans-serif}
+.svc-badge-dot{width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0}
+.svc-hero h1{color:#0A1628;font-size:clamp(1.7rem,4vw,2.85rem);font-weight:900;line-height:1.14;letter-spacing:-0.02em;margin:0 0 18px;font-family:'Montserrat',sans-serif}
+.svc-hero-lead{color:#475569;font-size:clamp(1rem,2vw,1.15rem);line-height:1.75;margin:0 0 28px;max-width:56ch}
+.svc-hero-ctas{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:26px}
+.svc-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:14px 24px;border-radius:12px;font-weight:800;font-size:14px;text-decoration:none;transition:all .2s;font-family:'Montserrat',sans-serif;letter-spacing:.01em}
+.svc-btn-primary{background:linear-gradient(135deg,#0A1628,#0F2744);color:#fff;box-shadow:0 6px 20px rgba(10,22,40,0.25)}
+.svc-btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(10,22,40,0.32)}
+.svc-btn-wa{background:#25D366;color:#fff;box-shadow:0 6px 20px rgba(37,211,102,0.3)}
+.svc-btn-wa:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(37,211,102,0.38)}
+.svc-hero-trust{display:flex;flex-wrap:wrap;gap:10px 22px}
+.svc-trust-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#64748b;font-weight:600}
+.svc-trust-item svg{flex-shrink:0}
+.svc-hero-media{position:relative}
+.svc-hero-media-frame{position:relative;border-radius:24px;overflow:hidden;box-shadow:0 24px 64px rgba(10,22,40,0.18);aspect-ratio:6/5}
+.svc-hero-media-frame::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(10,22,40,0.35),transparent 45%)}
+.svc-hero-media-frame img{width:100%;height:100%;object-fit:cover;display:block}
+.svc-hero-media-badge{position:absolute;bottom:-14px;left:20px;background:#fff;border-radius:14px;padding:10px 16px;box-shadow:0 10px 30px rgba(10,22,40,0.15);font-weight:800;font-size:13px;color:#0A1628;display:flex;align-items:center;gap:8px;font-family:'Montserrat',sans-serif}
+@media(max-width:900px){.svc-hero-media-badge{left:50%;transform:translateX(-50%)}}
 
-/* ── RESUMEN RÁPIDO ──────────────────────────────── */
-.resumen{position:relative;background:linear-gradient(135deg,#0A1628,#0F2744);border-radius:20px;padding:clamp(20px,4vw,32px) clamp(20px,4vw,36px);margin-bottom:40px;overflow:hidden}
-.resumen-glow{position:absolute;top:0;right:0;width:200px;height:100%;background:linear-gradient(to left,rgba(245,158,11,0.08),transparent);pointer-events:none}
-.resumen-label{font-size:10px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;font-family:'Montserrat',sans-serif}
-.resumen-text{color:rgba(255,255,255,0.92);font-size:clamp(0.95rem,2vw,1.08rem);line-height:1.85;margin:0;font-style:italic}
-.resumen-disclaimer{margin-top:16px;padding-top:14px;border-top:1px solid rgba(245,158,11,0.2);font-size:11px;color:rgba(245,158,11,0.7);font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+/* ── BENEFICIOS ("Por qué elegirnos") ─────────────── */
+.svc-benefits{background:#fff;padding:clamp(48px,7vw,72px) 24px;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9}
+.svc-benefits-inner{max-width:1300px;margin:0 auto;text-align:center}
+.svc-benefits .svc-section-eyebrow,.svc-benefits .svc-section-title{text-align:center}
+.svc-benefits-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:left}
+@media(max-width:1000px){.svc-benefits-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.svc-benefits-grid{grid-template-columns:1fr}}
+.svc-benefit-card{background:#f8fafc;border:1px solid #f1f5f9;border-radius:18px;padding:24px 22px}
+.svc-benefit-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 6px 18px rgba(245,158,11,0.3)}
+.svc-benefit-title{color:#0A1628;font-weight:800;font-size:15px;margin-bottom:8px;font-family:'Montserrat',sans-serif}
+.svc-benefit-desc{color:#64748b;font-size:13px;line-height:1.65}
 
 /* ── CONTENIDO ───────────────────────────────────── */
-.ac{max-width:min(720px,100%);overflow-wrap:break-word;word-break:break-word;min-width:0}
-.ac h2{color:#0A1628;font-size:clamp(1.15rem,2.5vw,1.45rem);font-weight:900;margin:2.75rem 0 1.2rem;line-height:1.2;padding:0 0 14px;border-bottom:2px solid #f1f5f9;letter-spacing:-0.3px;scroll-margin-top:80px;font-family:'Montserrat',sans-serif}
-.ac h3{color:#0A1628;font-size:clamp(1rem,2vw,1.12rem);font-weight:800;margin:2rem 0 0.8rem;padding:10px 16px;border-radius:10px;background:rgba(10,22,40,0.03);border-left:4px solid #f59e0b;line-height:1.4;font-family:'Montserrat',sans-serif}
-.ac p{color:#1a2332;margin-bottom:1.5rem;line-height:1.9;font-size:clamp(0.95rem,2vw,1.02rem);overflow-wrap:break-word;text-align:justify}
+.svc-content-section{padding:clamp(48px,7vw,72px) 24px;background:#f8fafc}
+.svc-content-wrap{max-width:820px;margin:0 auto}
+.svc-quicknav{display:flex;gap:8px;overflow-x:auto;padding-bottom:14px;margin-bottom:28px;-webkit-overflow-scrolling:touch}
+.svc-quicknav a{flex-shrink:0;background:#fff;border:1px solid #e2e8f0;border-radius:9999px;padding:8px 16px;font-size:12.5px;font-weight:700;color:#475569;white-space:nowrap;transition:all .15s}
+.svc-quicknav a:hover{border-color:#f59e0b;color:#b45309;background:#fffbeb}
+.svc-content-card{background:#fff;border-radius:24px;border:1px solid #f1f5f9;box-shadow:0 4px 24px rgba(10,22,40,0.05);padding:clamp(24px,4vw,48px)}
+.ac{overflow-wrap:break-word;word-break:break-word;min-width:0}
+.ac h2{color:#0A1628;font-size:clamp(1.1rem,2.5vw,1.4rem);font-weight:900;margin:2.5rem 0 1.1rem;line-height:1.25;padding:0 0 12px;border-bottom:2px solid #f1f5f9;letter-spacing:-0.02em;scroll-margin-top:24px;font-family:'Montserrat',sans-serif}
+.ac h2:first-child{margin-top:0}
+.ac h3{color:#0A1628;font-size:clamp(1rem,2vw,1.1rem);font-weight:800;margin:1.75rem 0 0.7rem;padding:10px 16px;border-radius:10px;background:rgba(10,22,40,0.03);border-left:4px solid #f59e0b;line-height:1.4;font-family:'Montserrat',sans-serif}
+.ac p{color:#334155;margin-bottom:1.35rem;line-height:1.85;font-size:clamp(0.95rem,2vw,1.02rem);overflow-wrap:break-word;text-align:left}
 .ac strong{color:#0A1628;font-weight:700}
-.ac ul{margin-bottom:1.5rem;padding:0;list-style:none}
-.ac ul li{color:#1a2332;margin-bottom:.75rem;padding-left:1.75rem;position:relative;line-height:1.85;font-size:clamp(.93rem,2vw,1rem)}
+.ac ul{margin-bottom:1.35rem;padding:0;list-style:none}
+.ac ul li{color:#334155;margin-bottom:.7rem;padding-left:1.65rem;position:relative;line-height:1.75;font-size:clamp(.93rem,2vw,1rem)}
 .ac ul li::before{content:"▸";color:#f59e0b;font-weight:900;position:absolute;left:0;top:2px}
-.ac ol{margin-bottom:1.5rem;padding:0;list-style:none;counter-reset:ol}
-.ac ol li{counter-increment:ol;color:#1a2332;margin-bottom:.75rem;padding-left:2.2rem;position:relative;line-height:1.85}
-.ac ol li::before{content:counter(ol);position:absolute;left:0;width:22px;height:22px;background:linear-gradient(135deg,#0A1628,#1a3560);color:#f59e0b;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;top:3px}
-.ac blockquote{border-left:5px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7 60%,#fffbeb);padding:18px 18px 18px 50px;margin:1.75rem 0;border-radius:0 14px 14px 0;position:relative}
-.ac blockquote::before{content:"💡";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px}
+.ac ol{margin-bottom:1.35rem;padding:0;list-style:none;counter-reset:ol}
+.ac ol li{counter-increment:ol;color:#334155;margin-bottom:.7rem;padding-left:2.1rem;position:relative;line-height:1.75}
+.ac ol li::before{content:counter(ol);position:absolute;left:0;width:21px;height:21px;background:linear-gradient(135deg,#0A1628,#1a3560);color:#f59e0b;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;top:2px}
+.ac blockquote{border-left:5px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7 60%,#fffbeb);padding:16px 18px 16px 48px;margin:1.6rem 0;border-radius:0 14px 14px 0;position:relative}
+.ac blockquote::before{content:"💡";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:19px}
 .ac blockquote p{color:#374151;font-style:italic;margin:0;font-weight:500}
-.ac table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1.75rem 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(10,22,40,0.08)}
-.ac th{background:linear-gradient(135deg,#0A1628,#0F2744);color:#f59e0b;padding:11px 14px;text-align:left;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.8px}
+.ac table{width:100%;border-collapse:collapse;font-size:.86rem;margin:1.6rem 0;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(10,22,40,0.08)}
+.ac th{background:linear-gradient(135deg,#0A1628,#0F2744);color:#f59e0b;padding:10px 14px;text-align:left;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.8px}
 .ac td{padding:10px 14px;border-bottom:1px solid #f1f5f9;color:#1f2937}
 .ac tr:nth-child(even) td{background:#f8fafc}
-.ac hr{border:none;margin:2.5rem 0;height:1px;background:linear-gradient(to right,transparent,#f59e0b 30%,#f59e0b 70%,transparent)}
-.ac img{max-width:100%;height:auto;border-radius:14px;margin:1.75rem auto;display:block;box-shadow:0 10px 36px rgba(0,0,0,0.1)}
-.ac [data-callout="dorado"]{border-left:5px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7 60%,#fffbeb);padding:16px 18px 16px 50px;margin:1.75rem 0;border-radius:0 14px 14px 0;position:relative}
-.ac [data-callout="dorado"]::before{content:"💡";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px}
-.ac [data-callout="verde"]{border-left:5px solid #10b981;background:linear-gradient(135deg,#ecfdf5,#d1fae5 60%,#ecfdf5);padding:16px 18px 16px 50px;margin:1.75rem 0;border-radius:0 14px 14px 0;position:relative}
-.ac [data-callout="verde"]::before{content:"✅";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px}
-.ac [data-callout-title]{font-weight:900;font-size:.93rem;margin-bottom:6px;display:block}
-.ac [data-callout-body]{font-size:.88rem;line-height:1.7;display:block}
-@media(max-width:640px){.ac p{text-align:left!important}}
+.ac hr{border:none;margin:2.25rem 0;height:1px;background:linear-gradient(to right,transparent,#f59e0b 30%,#f59e0b 70%,transparent)}
+.ac img{max-width:100%;height:auto;border-radius:14px;margin:1.6rem auto;display:block;box-shadow:0 10px 36px rgba(0,0,0,0.1)}
+.ac [data-callout="dorado"]{border-left:5px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7 60%,#fffbeb);padding:16px 18px 16px 48px;margin:1.6rem 0;border-radius:0 14px 14px 0;position:relative}
+.ac [data-callout="dorado"]::before{content:"💡";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:19px}
+.ac [data-callout="verde"]{border-left:5px solid #10b981;background:linear-gradient(135deg,#ecfdf5,#d1fae5 60%,#ecfdf5);padding:16px 18px 16px 48px;margin:1.6rem 0;border-radius:0 14px 14px 0;position:relative}
+.ac [data-callout="verde"]::before{content:"✅";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:17px}
+.ac [data-callout-title]{font-weight:900;font-size:.92rem;margin-bottom:6px;display:block}
+.ac [data-callout-body]{font-size:.87rem;line-height:1.65;display:block}
+
+/* ── PROCESO ──────────────────────────────────────── */
+.svc-process{background:linear-gradient(160deg,#0A1628,#0d1f3c 60%,#071020);padding:clamp(48px,7vw,72px) 24px}
+.svc-process-inner{max-width:1300px;margin:0 auto;text-align:center}
+.svc-process .svc-section-eyebrow,.svc-process .svc-section-title{text-align:center}
+.svc-process-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;text-align:left;counter-reset:step}
+@media(max-width:1000px){.svc-process-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.svc-process-grid{grid-template-columns:1fr}}
+.svc-step{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:24px 22px;position:relative}
+.svc-step-num{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#020617;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-family:'Montserrat',sans-serif}
+.svc-step-title{color:#fff;font-weight:800;font-size:14.5px;margin-bottom:8px;font-family:'Montserrat',sans-serif}
+.svc-step-desc{color:rgba(255,255,255,0.55);font-size:12.5px;line-height:1.65}
 
 /* ── FAQs ─────────────────────────────────────────── */
-.faqs{margin-top:40px}
-.faqs-title{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-.faqs-title-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(245,158,11,0.38);font-size:18px}
-.faqs-title h2{color:#0A1628;font-weight:900;font-size:1.2rem;margin:0;font-family:'Montserrat',sans-serif}
-.faq-item{border:1px solid #e2e8f0;border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.svc-faq-section{padding:0 24px clamp(48px,7vw,72px);background:#f8fafc}
+.svc-faq-inner{max-width:820px;margin:0 auto}
+.faq-item{border:1px solid #e2e8f0;border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .2s;background:#fff}
 .faq-item.open{border-color:#f59e0b}
 .faq-q{width:100%;background:#fff;border:none;cursor:pointer;padding:16px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;text-align:left;transition:background .15s;font-family:inherit}
 .faq-q:hover{background:#fffbeb}
@@ -414,34 +445,33 @@ a{text-decoration:none}
 .faq-a.open{display:block}
 .faq-a-inner{background:rgba(245,158,11,0.05);border-left:3px solid #f59e0b;border-radius:0 8px 8px 0;padding:12px 16px;font-size:14px;color:#475569;line-height:1.8}
 
-/* ── SIDEBAR ─────────────────────────────────────── */
-.sidebar{position:sticky;top:80px}
-.side-toc{border-radius:16px;overflow:hidden;border:1px solid #1e293b;background:#0f172a;margin-bottom:16px}
-.side-toc-header{background:linear-gradient(135deg,#0A1628,#0d1f3c);padding:14px 18px;font-weight:800;font-size:12px;color:#f59e0b;letter-spacing:.05em;text-transform:uppercase;font-family:'Montserrat',sans-serif;display:flex;align-items:center;gap:8px}
-.toc-list{padding:8px 10px 12px;display:flex;flex-direction:column;gap:2px}
-.toc-item{width:100%;background:transparent;border:none;border-left:2.5px solid transparent;cursor:pointer;padding:9px 10px 9px 12px;border-radius:0 10px 10px 0;transition:all .18s;display:flex;align-items:center;gap:10px;text-align:left;font-family:inherit}
-.toc-item:hover{background:rgba(245,158,11,0.05);border-left-color:rgba(245,158,11,0.35)}
-.toc-item.active{background:rgba(245,158,11,0.1);border-left-color:#f59e0b}
-.toc-num{min-width:22px;height:22px;border-radius:6px;font-size:10px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,0.06);color:#475569;transition:all .2s}
-.toc-item.active .toc-num{background:linear-gradient(135deg,#f59e0b,#d97706);color:#020617}
-.toc-text{font-size:12px;color:#94a3b8;line-height:1.55;font-weight:500;flex:1;transition:color .18s;text-align:left}
-.toc-item.active .toc-text{color:#f8fafc;font-weight:700}
+/* ── SERVICIOS RELACIONADOS ───────────────────────── */
+.svc-related{background:#fff;padding:clamp(48px,7vw,72px) 24px;border-top:1px solid #f1f5f9}
+.svc-related-inner{max-width:1300px;margin:0 auto}
+.svc-related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.svc-related-grid{grid-template-columns:1fr}}
+.svc-related-card{display:block;background:#f8fafc;border:1px solid #f1f5f9;border-radius:18px;overflow:hidden;transition:all .2s}
+.svc-related-card:hover{border-color:#f59e0b;box-shadow:0 12px 32px rgba(10,22,40,0.1);transform:translateY(-3px)}
+.svc-related-img{height:150px;overflow:hidden;background:#0A1628}
+.svc-related-img img{width:100%;height:100%;object-fit:cover;display:block}
+.svc-related-body{padding:18px 20px 20px}
+.svc-related-title{color:#0A1628;font-weight:800;font-size:14.5px;margin-bottom:6px;font-family:'Montserrat',sans-serif}
+.svc-related-desc{color:#64748b;font-size:12.5px;line-height:1.6;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.svc-related-cta{display:inline-flex;align-items:center;gap:6px;color:#b45309;font-size:12px;font-weight:800}
 
-/* Sidebar CTA */
-.side-cta{border-radius:18px;overflow:hidden;border:1px solid #1e293b;background:#020617;margin-bottom:16px}
-.side-cta-stripe{background:linear-gradient(90deg,#f59e0b,#d97706);height:3px}
-.side-cta-body{padding:20px 20px 22px}
-.cta-title{color:#fff;font-weight:900;font-size:16px;margin:0 0 4px;font-family:'Montserrat',sans-serif}
-.cta-sub{color:rgba(255,255,255,0.45);font-size:12px;line-height:1.5;margin-bottom:16px}
-.cta-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:11px;color:#020617;font-weight:800;font-size:13px;text-decoration:none;box-shadow:0 4px 16px rgba(245,158,11,0.3);transition:all .2s;letter-spacing:.01em}
-.cta-btn:hover{box-shadow:0 6px 22px rgba(245,158,11,0.5);transform:translateY(-1px)}
-.cta-btn-wa{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:11px;background:rgba(37,211,102,0.09);border:1px solid rgba(37,211,102,0.2);color:#4ade80;font-size:13px;text-decoration:none;font-weight:700;transition:all .2s;margin-top:10px}
-.cta-btn-wa:hover{background:rgba(37,211,102,0.16);border-color:rgba(37,211,102,0.38)}
-.side-info{border-radius:14px;border:1px solid #e2e8f0;background:#fff;padding:16px 18px;margin-bottom:16px}
-.side-info-title{font-size:11px;font-weight:800;color:#0A1628;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-family:'Montserrat',sans-serif}
-.side-info-row{display:flex;align-items:center;gap:10px;font-size:13px;color:#374151;margin-bottom:10px}
-.side-info-row:last-child{margin-bottom:0}
-.side-info-row svg{flex-shrink:0;fill:#f59e0b}
+/* ── CTA FINAL ────────────────────────────────────── */
+.svc-final-cta{background:linear-gradient(135deg,#0A1628,#0F2744);padding:clamp(48px,7vw,72px) 24px;text-align:center}
+.svc-final-cta-inner{max-width:680px;margin:0 auto}
+.svc-final-cta h2{color:#fff;font-size:clamp(1.3rem,3vw,1.8rem);font-weight:900;letter-spacing:-0.02em;margin-bottom:12px;font-family:'Montserrat',sans-serif}
+.svc-final-cta p{color:rgba(255,255,255,0.55);font-size:14.5px;margin-bottom:28px}
+.svc-final-cta .svc-hero-ctas{justify-content:center;margin-bottom:0}
+
+/* ── INFO DE CONTACTO ─────────────────────────────── */
+.svc-contact-strip{background:#fff;border-top:1px solid #f1f5f9;padding:22px 24px}
+.svc-contact-strip-inner{max-width:1300px;margin:0 auto;display:flex;flex-wrap:wrap;justify-content:center;gap:16px 32px}
+.svc-contact-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;font-weight:600}
+.svc-contact-item svg{flex-shrink:0;fill:#f59e0b}
+.svc-contact-item a{color:#0A1628;font-weight:700}
 
 /* ── FOOTER ──────────────────────────────────────── */
 .footer{background:#020617;padding:40px 24px;text-align:center;border-top:1px solid #0f172a}
@@ -458,11 +488,9 @@ a{text-decoration:none}
 .wa-float:hover{transform:scale(1.1)}
 .scroll-top{position:fixed;bottom:90px;right:20px;width:44px;height:44px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:0 4px 16px rgba(245,158,11,0.4);z-index:98;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none}
 .scroll-top.visible{opacity:1;transform:translateY(0);pointer-events:auto}
-.read-progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(to right,#f59e0b,#d97706);z-index:10001;width:0%;transition:width .1s}
 </style>
 </head>
 <body>
-<div class="read-progress" id="readProgress"></div>
 
 <?php if ($previewMode && !$srv['published']): ?>
 <div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#d97706;color:#020617;text-align:center;padding:8px 16px;font-weight:800;font-size:13px;letter-spacing:.05em">
@@ -520,143 +548,214 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
 </div>
 
 <!-- HERO -->
-<div class="hero">
-  <img class="hero-img" src="<?= $e($imagenUrl) ?>" alt="<?= $e($imagenAlt) ?>" width="1400" height="420" loading="eager">
-  <div class="hero-overlay"></div>
-  <a href="/<?= $linea ?>" class="hero-back">
-    <span class="hero-back-icon">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    </span>
-    Volver a <?= $e($lineaNombre) ?>
-  </a>
-  <div class="hero-content">
-    <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
-      <span class="hero-badge-text"><?= $e($lineaNombre) ?> · <?= $e($areaCob) ?></span>
-    </div>
-    <h1><?= $e($h1) ?></h1>
-    <div class="hero-line"></div>
-    <div class="hero-meta">
-      <div class="hero-meta-item">
-        <svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
-        <?= $e($areaCob) ?>
+<section class="svc-hero">
+  <div class="svc-hero-inner">
+    <div class="svc-hero-copy">
+      <div class="svc-badge">
+        <span class="svc-badge-dot"></span>
+        <?= $e($lineaNombre) ?> · <?= $e($areaCob) ?>
       </div>
-      <div class="hero-meta-item">
-        <svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-        <?= $readTime ?> min de lectura
-      </div>
-      <div class="hero-meta-item">
-        <svg width="12" height="12" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-        +57 313 203 7572
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MAIN -->
-<div class="main">
-  <div style="min-width:0">
-
-    <?php if ($resumen): ?>
-    <div class="resumen">
-      <div class="resumen-glow"></div>
-      <div class="resumen-label">Resumen ejecutivo</div>
-      <p class="resumen-text"><?= $e($resumen) ?></p>
-      <div class="resumen-disclaimer">⚠ Contenido informativo — no reemplaza asesoría jurídica personalizada</div>
-    </div>
-    <?php endif; ?>
-
-    <article class="ac"><?= $content ?></article>
-
-    <?php if (!empty($faqs)): ?>
-    <section class="faqs">
-      <div class="faqs-title">
-        <div class="faqs-title-icon">❓</div>
-        <h2>Preguntas frecuentes sobre <?= $e($nombreSrv) ?></h2>
-      </div>
-      <?php foreach ($faqs as $i => $faq): ?>
-      <div class="faq-item" id="faq-<?= $i ?>">
-        <button class="faq-q" onclick="toggleFaq(<?= $i ?>)">
-          <span class="faq-q-text"><?= $e($faq['q'] ?? '') ?></span>
-          <span class="faq-icon" id="faqicon-<?= $i ?>">+</span>
-        </button>
-        <div class="faq-a" id="faqa-<?= $i ?>">
-          <div class="faq-a-inner"><?= $e($faq['a'] ?? '') ?></div>
-        </div>
-      </div>
-      <?php endforeach; ?>
-    </section>
-    <?php endif; ?>
-
-  </div>
-
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-
-    <?php if (!empty($toc)): ?>
-    <div class="side-toc">
-      <div class="side-toc-header">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b"><path d="M3 9h14V7H3v2zm0 4h14v-2H3v2zm0 4h7v-2H3v2zm16-6l5 5-5 5v-4H12v-2h7v-4z"/></svg>
-        Contenido · <?= $readTime ?> min
-      </div>
-      <div class="toc-list" id="tocList">
-        <?php foreach ($toc as $item): ?>
-        <button class="toc-item" id="toc-<?= $item['id'] ?>" onclick="scrollToSection('<?= $item['id'] ?>')">
-          <span class="toc-num"><?= $item['num'] ?></span>
-          <span class="toc-text"><?= $e($item['text']) ?></span>
-        </button>
-        <?php endforeach; ?>
-      </div>
-    </div>
-    <?php endif; ?>
-
-    <div class="side-cta">
-      <div class="side-cta-stripe"></div>
-      <div class="side-cta-body">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,0.6);flex-shrink:0"></div>
-          <span style="font-size:11px;color:#22c55e;font-weight:700;letter-spacing:.04em">EN LÍNEA · Respuesta en &lt;24h</span>
-        </div>
-        <div class="cta-title">¿Necesita asesoría?</div>
-        <div class="cta-sub">Cuéntenos su caso y le respondemos sin costo</div>
+      <h1><?= $e($h1) ?></h1>
+      <?php if ($resumen): ?>
+      <p class="svc-hero-lead"><?= $e($resumen) ?></p>
+      <?php endif; ?>
+      <div class="svc-hero-ctas">
         <?php if (in_array($ctaTipo, ['whatsapp','ambos'])): ?>
-        <a href="https://wa.me/573132037572?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20<?= urlencode($nombreSrv) ?>" class="cta-btn-wa" target="_blank" rel="noopener">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          WhatsApp
+        <a href="https://wa.me/573132037572?text=Hola%2C%20necesito%20informaci%C3%B3n%20sobre%20<?= urlencode($nombreSrv) ?>" class="svc-btn svc-btn-wa" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Escribir por WhatsApp
         </a>
         <?php endif; ?>
         <?php if (in_array($ctaTipo, ['formulario','ambos'])): ?>
-        <a href="/contacto" class="cta-btn" style="margin-top:10px">
-          Formulario de contacto
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </a>
-        <?php endif; ?>
-        <?php if ($ctaTipo === 'whatsapp'): ?>
-        <a href="/contacto" class="cta-btn" style="margin-top:10px">
-          Ver todos los contactos
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        <a href="/contacto" class="svc-btn svc-btn-primary">
+          Solicitar consulta gratuita
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
         <?php endif; ?>
       </div>
-    </div>
-
-    <div class="side-info">
-      <div class="side-info-title">Información de contacto</div>
-      <div class="side-info-row">
-        <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
-        <span>CRA 7 #17-01, Bogotá</span>
-      </div>
-      <div class="side-info-row">
-        <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-        <span>L–V 8am–6pm · Sáb cita previa</span>
-      </div>
-      <div class="side-info-row">
-        <svg width="14" height="14" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-        <a href="tel:+573132037572" style="color:#0A1628;font-weight:700">+57 313 203 7572</a>
+      <div class="svc-hero-trust">
+        <div class="svc-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+          Primera consulta gratuita
+        </div>
+        <div class="svc-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Respuesta en menos de 24h
+        </div>
+        <div class="svc-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A1628" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          +57 313 203 7572
+        </div>
       </div>
     </div>
+    <div class="svc-hero-media">
+      <div class="svc-hero-media-frame">
+        <img src="<?= $e($imagenUrl) ?>" alt="<?= $e($imagenAlt) ?>" width="600" height="500" loading="eager">
+      </div>
+      <div class="svc-hero-media-badge">⚖️ <?= $e($lineaNombre) ?></div>
+    </div>
+  </div>
+</section>
 
-  </aside>
+<!-- POR QUÉ ELEGIRNOS -->
+<section class="svc-benefits">
+  <div class="svc-benefits-inner">
+    <div class="svc-section-eyebrow">Por qué elegirnos</div>
+    <h2 class="svc-section-title">La tranquilidad de un equipo especializado</h2>
+    <div class="svc-benefits-grid">
+      <div class="svc-benefit-card">
+        <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/></svg></div>
+        <div class="svc-benefit-title">Experiencia comprobada</div>
+        <div class="svc-benefit-desc">Más de 10 años representando empresas y personas naturales en Colombia.</div>
+      </div>
+      <div class="svc-benefit-card">
+        <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="svc-benefit-title">Respuesta ágil</div>
+        <div class="svc-benefit-desc">Le contactamos en menos de 24 horas para entender su caso.</div>
+      </div>
+      <div class="svc-benefit-card">
+        <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div class="svc-benefit-title">Consulta inicial gratuita</div>
+        <div class="svc-benefit-desc">Evaluamos su situación sin costo antes de iniciar cualquier proceso.</div>
+      </div>
+      <div class="svc-benefit-card">
+        <div class="svc-benefit-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#020617" stroke-width="2.2"><path d="M12 22c-4.97 0-9-2.69-9-6v-1.5C3 11.46 7.03 9 12 9s9 2.46 9 5.5V16c0 3.31-4.03 6-9 6z"/><path d="M12 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg></div>
+        <div class="svc-benefit-title">Acompañamiento transparente</div>
+        <div class="svc-benefit-desc">Le mantenemos informado en cada etapa, sin sorpresas.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTENIDO -->
+<section class="svc-content-section">
+  <div class="svc-content-wrap">
+
+    <?php if (!empty($toc)): ?>
+    <nav class="svc-quicknav">
+      <?php foreach ($toc as $item): ?>
+      <a href="#<?= $item['id'] ?>" onclick="event.preventDefault();scrollToSection('<?= $item['id'] ?>')"><?= $e($item['text']) ?></a>
+      <?php endforeach; ?>
+    </nav>
+    <?php endif; ?>
+
+    <div class="svc-content-card">
+      <article class="ac"><?= $content ?></article>
+    </div>
+  </div>
+</section>
+
+<!-- NUESTRO PROCESO -->
+<section class="svc-process">
+  <div class="svc-process-inner">
+    <div class="svc-section-eyebrow svc-section-eyebrow-light">Cómo trabajamos</div>
+    <h2 class="svc-section-title svc-section-title-light">Nuestro proceso en 4 pasos</h2>
+    <div class="svc-process-grid">
+      <div class="svc-step">
+        <div class="svc-step-num">1</div>
+        <div class="svc-step-title">Consulta inicial</div>
+        <div class="svc-step-desc">Cuéntenos su caso por WhatsApp o el formulario de contacto, sin costo ni compromiso.</div>
+      </div>
+      <div class="svc-step">
+        <div class="svc-step-num">2</div>
+        <div class="svc-step-title">Análisis del caso</div>
+        <div class="svc-step-desc">Evaluamos la viabilidad legal y definimos la mejor estrategia para su situación.</div>
+      </div>
+      <div class="svc-step">
+        <div class="svc-step-num">3</div>
+        <div class="svc-step-title">Estrategia legal</div>
+        <div class="svc-step-desc">Actuamos: representación, negociación o litigio según lo que su caso requiera.</div>
+      </div>
+      <div class="svc-step">
+        <div class="svc-step-num">4</div>
+        <div class="svc-step-title">Resultado y seguimiento</div>
+        <div class="svc-step-desc">Le mantenemos informado en cada etapa hasta resolver su caso.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<?php if (!empty($faqs)): ?>
+<!-- FAQ -->
+<section class="svc-faq-section">
+  <div class="svc-faq-inner">
+    <div class="svc-section-eyebrow">Preguntas frecuentes</div>
+    <h2 class="svc-section-title">Dudas comunes sobre <?= $e($nombreSrv) ?></h2>
+    <?php foreach ($faqs as $i => $faq): ?>
+    <div class="faq-item" id="faq-<?= $i ?>">
+      <button class="faq-q" onclick="toggleFaq(<?= $i ?>)">
+        <span class="faq-q-text"><?= $e($faq['q'] ?? '') ?></span>
+        <span class="faq-icon" id="faqicon-<?= $i ?>">+</span>
+      </button>
+      <div class="faq-a" id="faqa-<?= $i ?>">
+        <div class="faq-a-inner"><?= $e($faq['a'] ?? '') ?></div>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php if (!empty($related)): ?>
+<!-- SERVICIOS RELACIONADOS -->
+<section class="svc-related">
+  <div class="svc-related-inner">
+    <div class="svc-section-eyebrow">También puede interesarle</div>
+    <h2 class="svc-section-title">Otros servicios en <?= $e($lineaNombre) ?></h2>
+    <div class="svc-related-grid">
+      <?php foreach ($related as $r): ?>
+      <a href="/<?= $linea ?>/<?= $e($r['slug']) ?>" class="svc-related-card">
+        <div class="svc-related-img">
+          <img src="<?= $e($r['imagen_url'] ?: 'https://litesco.com.co/images/hero-poster.webp') ?>" alt="<?= $e($r['h1']) ?>" width="400" height="150" loading="lazy">
+        </div>
+        <div class="svc-related-body">
+          <div class="svc-related-title"><?= $e($r['h1']) ?></div>
+          <div class="svc-related-desc"><?= $e($r['meta_desc'] ?? '') ?></div>
+          <span class="svc-related-cta">Ver servicio <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        </div>
+      </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
+<!-- CTA FINAL -->
+<section class="svc-final-cta">
+  <div class="svc-final-cta-inner">
+    <h2>¿Necesita asesoría en <?= $e($nombreSrv) ?>?</h2>
+    <p>Cuéntenos su caso, sin costo ni compromiso.</p>
+    <div class="svc-hero-ctas">
+      <?php if (in_array($ctaTipo, ['whatsapp','ambos'])): ?>
+      <a href="https://wa.me/573132037572?text=Hola%2C+me+interesa+<?= urlencode($nombreSrv) ?>" class="svc-btn svc-btn-wa" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        WhatsApp
+      </a>
+      <?php endif; ?>
+      <a href="/contacto" class="svc-btn svc-btn-primary" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+        Formulario de contacto
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- INFO DE CONTACTO -->
+<div class="svc-contact-strip">
+  <div class="svc-contact-strip-inner">
+    <div class="svc-contact-item">
+      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
+      CRA 7 #17-01, Bogotá
+    </div>
+    <div class="svc-contact-item">
+      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+      L–V 8am–6pm · Sáb cita previa
+    </div>
+    <div class="svc-contact-item">
+      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+      <a href="tel:+573132037572">+57 313 203 7572</a>
+    </div>
+  </div>
 </div>
 
 <!-- FOOTER -->
@@ -736,25 +835,11 @@ document.querySelectorAll('a[href*="wa.me"], a[href="/contacto"]').forEach(funct
   });
 });
 
-// ── Progress bar + Scroll top
+// ── Scroll top (visibilidad del botón)
 (function(){
-  const bar = document.getElementById('readProgress');
   const btn = document.getElementById('scrollTop');
-  const art = document.querySelector('.ac');
   function update() {
-    const scrolled = window.scrollY;
-    const total = document.documentElement.scrollHeight - window.innerHeight;
-    bar.style.width = (total > 0 ? (scrolled / total) * 100 : 0) + '%';
-    btn.classList.toggle('visible', scrolled > 300);
-    // TOC activo
-    if (art) {
-      const headings = art.querySelectorAll('h2[id]');
-      let active = null;
-      headings.forEach(h => { if (h.getBoundingClientRect().top <= 100) active = h.id; });
-      document.querySelectorAll('.toc-item').forEach(t => {
-        t.classList.toggle('active', active && t.id === 'toc-' + active);
-      });
-    }
+    btn.classList.toggle('visible', window.scrollY > 300);
   }
   window.addEventListener('scroll', update, { passive: true });
   update();
