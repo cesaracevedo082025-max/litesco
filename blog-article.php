@@ -226,6 +226,7 @@ header('Content-Type: text/html; charset=UTF-8');
     'alternateName'=>'Litigio Estratégico Colombiano',
     'url'=>'https://litesco.com.co',
     'logo'=>['@type'=>'ImageObject','url'=>'https://litesco.com.co/images/hero-poster.webp','width'=>1280,'height'=>720],
+    'image'=>'https://litesco.com.co/images/hero-poster.webp',
     'description'=>'Servicios jurídicos para empresas de todos los sectores en Colombia. Litigio estratégico, derecho corporativo y recuperación de cartera en Bogotá.',
     'address'=>[
         '@type'=>'PostalAddress',
