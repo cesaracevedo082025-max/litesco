@@ -31,7 +31,7 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^recuperacion/([^/]+)/?$ /servicios-articulo.php?linea=recuperacion&slug=$1 [L,QSA]
 
 # ── Seguridad: bloquear acceso a archivos sensibles ───────────────────────────
-<FilesMatch "\.(env|log|sql|bak|sh|htpasswd)$">
+<FilesMatch "\.(env|log|sql|bak|sh|htpasswd|zip|tar|gz|md)$">
     Require all denied
 </FilesMatch>
 

@@ -223,10 +223,15 @@ const HomePage = () => {
         <main className="relative min-h-screen bg-white overflow-x-hidden">
           
           {/* SECCIÓN HERO CON VIDEO */}
-          <section className="relative h-screen min-h-[500px] sm:min-h-[600px] overflow-hidden">
-            <div className="absolute inset-0 z-0">
-              {/* ✅ OPTIMIZACIÓN CRÍTICA: poster muestra imagen inmediata, video carga diferido */}
-              <video 
+          <section className="relative h-screen h-dvh min-h-[500px] sm:min-h-[600px] overflow-hidden">
+            <div
+              className="absolute inset-0 z-0 bg-cover bg-center"
+              style={{ backgroundImage: 'url(/images/hero-poster.webp)' }}
+            >
+              {/* ✅ OPTIMIZACIÓN CRÍTICA: poster muestra imagen inmediata, video carga diferido.
+                  El bg-image del contenedor evita el flash negro típico de <video> mientras
+                  decodifica el poster o el frame inicial en conexiones lentas. */}
+              <video
   ref={videoRef}
   loop
   muted

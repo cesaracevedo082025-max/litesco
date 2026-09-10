@@ -5,18 +5,17 @@
  */
 
 // ===== CONFIGURACIÓN =====
-$db_config = [
-    'host'     => 'localhost',
-    'dbname'   => 'myloptic1_litesco_blog',
-    'user'     => 'myloptic1_litesco_usr',
-    'password' => 'j}34Ik49W@10',
-    'charset'  => 'utf8mb4',
-];
+$db_config = require __DIR__ . '/db-config.php';
 
 $session_duration_hours = 24; // Sesiones expiran en 24 horas
 
 // ===== CORS HEADERS =====
-header("Access-Control-Allow-Origin: *");
+// Solo orígenes propios (antes '*'). Añade aquí otros hosts legítimos si hiciera falta.
+$__allowedOrigins = ['https://litesco.com.co', 'https://www.litesco.com.co'];
+if (in_array($_SERVER['HTTP_ORIGIN'] ?? '', $__allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+    header('Vary: Origin');
+}
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
@@ -107,10 +106,16 @@ function dbToFrontend($row) {
         'contentAlign'  => $row['content_align'] ?? 'center',
         'featured'      => (bool) $row['featured'],
         'published'     => (bool) $row['published'],
+        // Tipo de schema.org JSON-LD principal que genera blog-article.php para este
+        // artículo (ver Paso "Clasificación" del editor). Default 'BlogPosting' para
+        // artículos que aún no tienen la columna migrada (ver ensureTipoSchemaColumn).
+        'tipoSchema'    => $row['tipo_schema'] ?? 'BlogPosting',
     ];
 }
 
 function frontendToDb($article) {
+    $tipoSchema = $article['tipoSchema'] ?? 'BlogPosting';
+    if (!in_array($tipoSchema, ['BlogPosting', 'LegalArticle', 'NewsArticle'], true)) $tipoSchema = 'BlogPosting';
     return [
         'id'             => $article['id'] ?? 0,
         'title'          => $article['title'] ?? '',
@@ -129,7 +134,22 @@ function frontendToDb($article) {
         'content_align'  => $article['contentAlign'] ?? 'center',
         'featured'       => !empty($article['featured']) ? 1 : 0,
         'published'      => !empty($article['published']) ? 1 : 0,
+        'tipo_schema'    => $tipoSchema,
     ];
+}
+
+// Migración defensiva: agrega la columna si la tabla `articles` fue creada antes de
+// esta funcionalidad. Solo se intenta en el flujo de guardado (no en cada lectura
+// pública) para no cargar la API con un ALTER TABLE de más en cada visita al blog.
+function ensureTipoSchemaColumn($db) {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+    try {
+        $db->exec("ALTER TABLE articles ADD COLUMN tipo_schema ENUM('BlogPosting','LegalArticle','NewsArticle') NOT NULL DEFAULT 'BlogPosting' AFTER category");
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(), 'Duplicate column') === false) throw $e;
+    }
 }
 
 function generateSlug($title) {
@@ -174,6 +194,13 @@ if ($method === 'GET') {
             break;
 
         case 'diagnostico':
+            // Requiere sesión válida: antes exponía versión de PHP, estado de la BD
+            // y nº de sesiones activas a cualquiera sin autenticar.
+            if (!verifyToken($_GET['token'] ?? '')) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'No autorizado']);
+                break;
+            }
             $db = getDB();
             $count = $db->query("SELECT COUNT(*) as total FROM articles")->fetch();
             $sesCount = $db->query("SELECT COUNT(*) as total FROM sessions WHERE expires_at > NOW()")->fetch();
@@ -211,6 +238,15 @@ if ($method === 'POST') {
 
     // ── LOGIN (no requiere token) ────────────────────
     if ($action === 'login') {
+        require_once __DIR__ . '/lib/login-throttle.php';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        if (loginThrottleBlocked($ip)) {
+            usleep(500000);
+            http_response_code(429);
+            echo json_encode(['success' => false, 'message' => 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.']);
+            exit();
+        }
+
         $username = $data['username'] ?? '';
         $password = $data['password'] ?? '';
 
@@ -224,12 +260,14 @@ if ($method === 'POST') {
         $user = $stmt->fetch();
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
+            loginThrottleFail($ip);
             // Delay para prevenir fuerza bruta
             usleep(500000); // 0.5 segundos
             echo json_encode(['success' => false, 'message' => 'Credenciales incorrectas']);
             exit();
         }
 
+        loginThrottleReset($ip);
         $token = createSession($user['id']);
         echo json_encode([
             'success'  => true,
@@ -278,6 +316,7 @@ if ($method === 'POST') {
                 $article = $data['article'] ?? null;
                 if (!$article) { echo json_encode(['success' => false, 'message' => 'No se recibió artículo']); break; }
 
+                ensureTipoSchemaColumn($db);
                 $dbData = frontendToDb($article);
                 if (empty($dbData['slug'])) $dbData['slug'] = generateSlug($dbData['title']);
                 if (empty($dbData['id'])) $dbData['id'] = (int)(microtime(true) * 1000);
@@ -296,9 +335,9 @@ if ($method === 'POST') {
                 $exists = $stmt->fetch();
 
                 if ($exists) {
-                    $sql = "UPDATE articles SET title=:title, seo_title=:seo_title, meta_desc=:meta_desc, keyword=:keyword, slug=:slug, excerpt=:excerpt, content=:content, category=:category, author=:author, date=:date, image=:image, alt_text=:alt_text, image_position=:image_position, content_align=:content_align, featured=:featured, published=:published WHERE id=:id";
+                    $sql = "UPDATE articles SET title=:title, seo_title=:seo_title, meta_desc=:meta_desc, keyword=:keyword, slug=:slug, excerpt=:excerpt, content=:content, category=:category, author=:author, date=:date, image=:image, alt_text=:alt_text, image_position=:image_position, content_align=:content_align, featured=:featured, published=:published, tipo_schema=:tipo_schema WHERE id=:id";
                 } else {
-                    $sql = "INSERT INTO articles (id,title,seo_title,meta_desc,keyword,slug,excerpt,content,category,author,date,image,alt_text,image_position,content_align,featured,published) VALUES (:id,:title,:seo_title,:meta_desc,:keyword,:slug,:excerpt,:content,:category,:author,:date,:image,:alt_text,:image_position,:content_align,:featured,:published)";
+                    $sql = "INSERT INTO articles (id,title,seo_title,meta_desc,keyword,slug,excerpt,content,category,author,date,image,alt_text,image_position,content_align,featured,published,tipo_schema) VALUES (:id,:title,:seo_title,:meta_desc,:keyword,:slug,:excerpt,:content,:category,:author,:date,:image,:alt_text,:image_position,:content_align,:featured,:published,:tipo_schema)";
                 }
                 $stmt = $db->prepare($sql);
                 $stmt->execute($dbData);
@@ -404,7 +443,8 @@ if ($method === 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Acción no válida: ' . $action]);
         }
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Error BD: ' . $e->getMessage()]);
+        error_log('[blog-api] ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error al procesar la solicitud']);
     }
     exit();
 }

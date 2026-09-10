@@ -10,6 +10,7 @@ import { trackLead } from './MetaPixel'
 const WhatsAppButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   // ⚙️ CONFIGURACIÓN
   const WHATSAPP_NUMBER = "+573132037572";
@@ -27,6 +28,15 @@ const WhatsAppButton = () => {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Botón más pequeño y con menos margen en móvil para no tapar contenido
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const updateIsMobile = () => setIsMobile(mq.matches);
+    updateIsMobile();
+    mq.addEventListener('change', updateIsMobile);
+    return () => mq.removeEventListener('change', updateIsMobile);
   }, []);
 
   const categories = [
@@ -73,16 +83,18 @@ const WhatsAppButton = () => {
   const styles = {
     container: {
       position: 'fixed',
-      bottom: '30px',
-      right: '30px',
+      bottom: isMobile ? 'calc(14px + env(safe-area-inset-bottom, 0px))' : '30px',
+      right: isMobile ? '14px' : '30px',
       zIndex: 9999,
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     },
     menu: {
       position: 'absolute',
-      bottom: '80px',
+      bottom: isMobile ? '70px' : '80px',
       right: '0',
-      width: '320px',
+      width: isMobile ? 'min(300px, calc(100vw - 28px))' : '320px',
+      maxHeight: isMobile ? 'calc(100vh - 110px)' : 'none',
+      overflowY: isMobile ? 'auto' : 'visible',
       backgroundColor: '#ffffff',
       borderRadius: '16px',
       boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
@@ -219,8 +231,8 @@ const WhatsAppButton = () => {
       fontSize: '18px',
     },
     mainButton: {
-      width: '64px',
-      height: '64px',
+      width: isMobile ? '52px' : '64px',
+      height: isMobile ? '52px' : '64px',
       borderRadius: '50%',
       background: isOpen 
         ? 'linear-gradient(135deg, #1a1a4e, #0f0f2d)' 
@@ -237,8 +249,8 @@ const WhatsAppButton = () => {
       position: 'relative',
     },
     whatsappIcon: {
-      width: '32px',
-      height: '32px',
+      width: isMobile ? '26px' : '32px',
+      height: isMobile ? '26px' : '32px',
       fill: 'white',
       transition: 'all 0.3s ease',
       opacity: isOpen ? 0 : 1,
@@ -246,8 +258,8 @@ const WhatsAppButton = () => {
     },
     closeIcon: {
       position: 'absolute',
-      width: '24px',
-      height: '24px',
+      width: isMobile ? '20px' : '24px',
+      height: isMobile ? '20px' : '24px',
       fill: '#D4AF37',
       transition: 'all 0.3s ease',
       opacity: isOpen ? 1 : 0,
@@ -265,8 +277,8 @@ const WhatsAppButton = () => {
       fontSize: '13px',
       fontWeight: '500',
       whiteSpace: 'nowrap',
-      opacity: (isOpen || !showTooltip) ? 0 : 1,
-      visibility: (isOpen || !showTooltip) ? 'hidden' : 'visible',
+      opacity: (isOpen || !showTooltip || isMobile) ? 0 : 1,
+      visibility: (isOpen || !showTooltip || isMobile) ? 'hidden' : 'visible',
       transition: 'all 0.3s ease',
       boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
     },

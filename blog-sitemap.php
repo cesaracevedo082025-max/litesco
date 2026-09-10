@@ -4,13 +4,7 @@
  * Accesible en: https://litesco.com.co/blog-sitemap.php
  * Referenciado en robots.txt y enviado a Google Search Console.
  */
-$db_config = [
-    'host'     => 'localhost',
-    'dbname'   => 'myloptic1_litesco_blog',
-    'user'     => 'myloptic1_litesco_usr',
-    'password' => 'j}34Ik49W@10',
-    'charset'  => 'utf8mb4',
-];
+$db_config = require __DIR__ . '/db-config.php';
 
 $articles = [];
 try {

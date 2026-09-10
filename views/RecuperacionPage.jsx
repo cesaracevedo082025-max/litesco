@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion'
-import { 
-  FaCoins, 
-  FaChartLine, 
+import {
+  FaCoins,
+  FaChartLine,
   FaShieldAlt,
   FaUsers,
   FaBell,
@@ -26,9 +26,13 @@ import {
   FaHeadset,
   FaLock,
   FaRocket,
-  FaTrophy
+  FaTrophy,
+  FaGavel
 } from 'react-icons/fa'
 import { Sparkles } from 'lucide-react'
+import ServicioCard from '@/components/ui/ServicioCard'
+import ServicioPreviewModal from '@/components/ui/ServicioPreviewModal'
+import { fetchServiciosPorLinea } from '@/lib/serviciosClient'
 
 
 // Asegúrate de tener estas imágenes en tu carpeta assets
@@ -36,8 +40,34 @@ const heroImage = '/images/fondos/fondoRecuperacion.webp'
 const imagenRecuperacion1 = '/images/servicios/liquidez inmediata.webp'
 const imagenRecuperacion2 = '/images/servicios/In-House.webp'
 
+// El `subcategoria` de cada área debe coincidir exactamente con SUBCATEGORIAS.recuperacion
+// en views/ServiciosCMSPage.jsx: esta sección agrupa los servicios reales de la línea por
+// ese mismo valor, así que agregar/quitar un servicio de un área es un cambio de
+// contenido en el CMS, no de código.
+const AREAS_META = [
+  { subcategoria: 'Cobranza Extrajudicial', title: 'Cobranza Extrajudicial', icon: FaHandshake, description: 'Gestión de cobro amistosa y multicanal, antes de llegar a instancias judiciales.' },
+  { subcategoria: 'Cobranza Judicial', title: 'Cobranza Judicial', icon: FaGavel, description: 'Acción judicial estratégica cuando la vía extrajudicial se agota.' },
+  { subcategoria: 'BPO Empresarial', title: 'BPO Empresarial', icon: FaBuilding, description: 'Tercerización integral del proceso de cobranza, con reportería y control en tiempo real.' },
+  { subcategoria: 'Gestión de Cartera', title: 'Gestión de Cartera', icon: FaChartPie, description: 'Administración y seguimiento activo de cartera vencida para maximizar la recuperación.' },
+]
+
 const RecuperacionPage = () => {
   const [activeBenefit, setActiveBenefit] = useState(0)
+  const [activeArea, setActiveArea] = useState(0)
+  const [serviciosPorArea, setServiciosPorArea] = useState({})
+  const [loadingServicios, setLoadingServicios] = useState(true)
+  const [errorServicios, setErrorServicios] = useState(false)
+  const [previewServicio, setPreviewServicio] = useState(null)
+
+  // Servicios publicados de Recuperación, agrupados por área — ver lib/serviciosClient.js
+  useEffect(() => {
+    let alive = true
+    fetchServiciosPorLinea('recuperacion')
+      .then(({ porArea }) => { if (alive) setServiciosPorArea(porArea) })
+      .catch(() => { if (alive) setErrorServicios(true) })
+      .finally(() => { if (alive) setLoadingServicios(false) })
+    return () => { alive = false }
+  }, [])
 
   const procesoBPO = [
     {
@@ -593,6 +623,113 @@ const RecuperacionPage = () => {
               </div>
             </div>
           </section>
+
+          {/* SERVICIOS DE RECUPERACIÓN — contenedores de servicio reutilizables (ver ServicioCard) */}
+          <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+            <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <m.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+                className="mb-10 sm:mb-12 lg:mb-16 text-center"
+              >
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-4 sm:mb-6">
+                  Servicios de <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-700">Recuperación</span>
+                </h2>
+                <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-600 max-w-3xl mx-auto px-4 sm:px-0">
+                  Elige un área para ver los servicios específicos que ofrecemos
+                </p>
+              </m.div>
+
+              <div className="mb-8 sm:mb-10 lg:mb-12">
+                <div className="flex flex-wrap justify-center gap-2 sm:gap-3 lg:gap-4">
+                  {AREAS_META.map((area, index) => (
+                    <m.button
+                      key={area.subcategoria}
+                      onClick={() => setActiveArea(index)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg transition-all duration-300 ${
+                        activeArea === index
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xl'
+                          : 'bg-white text-slate-700 border-2 border-slate-200 hover:border-amber-300'
+                      }`}
+                    >
+                      <area.icon className={`inline mr-1.5 sm:mr-2 text-base sm:text-lg lg:text-xl ${activeArea === index ? 'text-white' : 'text-amber-600'}`} />
+                      <span>{area.title}</span>
+                    </m.button>
+                  ))}
+                </div>
+              </div>
+
+              <AnimatePresence mode="wait">
+                <m.div
+                  key={activeArea}
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -40 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-12 shadow-2xl border-2 border-slate-200"
+                >
+                  <div className="grid lg:grid-cols-[minmax(0,300px)_1fr] gap-8 sm:gap-10 lg:gap-12">
+                    <div>
+                      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+                          {React.createElement(AREAS_META[activeArea].icon, { className: 'text-xl sm:text-2xl lg:text-3xl text-white' })}
+                        </div>
+                        <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900">{AREAS_META[activeArea].title}</h3>
+                      </div>
+                      <p className="text-sm sm:text-base md:text-lg lg:text-xl text-slate-600 leading-relaxed">
+                        {AREAS_META[activeArea].description}
+                      </p>
+                    </div>
+
+                    <div>
+                      {loadingServicios && (
+                        <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                          {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="h-24 rounded-2xl border-2 border-slate-100 bg-slate-50 animate-pulse" />
+                          ))}
+                        </div>
+                      )}
+
+                      {!loadingServicios && errorServicios && (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                          No pudimos cargar los servicios en este momento. Escríbenos por WhatsApp y con gusto te ayudamos.
+                        </div>
+                      )}
+
+                      {!loadingServicios && !errorServicios && (serviciosPorArea[AREAS_META[activeArea].subcategoria] || []).length === 0 && (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                          Estamos publicando el contenido de esta área. Escríbenos y con gusto te asesoramos igual.
+                        </div>
+                      )}
+
+                      <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                        {(serviciosPorArea[AREAS_META[activeArea].subcategoria] || []).map((servicio, idx) => (
+                          <m.div
+                            key={servicio.id}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.06 }}
+                          >
+                            <ServicioCard
+                              servicio={servicio}
+                              icon={AREAS_META[activeArea].icon}
+                              onClick={() => setPreviewServicio(servicio)}
+                            />
+                          </m.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </m.div>
+              </AnimatePresence>
+            </div>
+          </section>
+
+          <ServicioPreviewModal servicio={previewServicio} onClose={() => setPreviewServicio(null)} />
 
           {/* CTA FINAL - VERSIÓN BLANCA Y LIMPIA */}
           <section className="relative py-20 lg:py-28 bg-white overflow-hidden border-t border-slate-200">

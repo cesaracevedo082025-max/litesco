@@ -88,6 +88,9 @@ web_modules/
 # Caché de página completa (servicios-articulo.php) — generado en runtime, no versionar
 /cache/servicios/*.html
 /cache/servicios/*.json
+# Throttle de login y flag de esquema (generados en runtime)
+/cache/login/
+/cache/.servicios-schema-ok
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

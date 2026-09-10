@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { m, LazyMotion, domAnimation, AnimatePresence } from 'framer-motion'
-import { 
-  FaBriefcase, 
-  FaCheckCircle, 
-  FaCalendarAlt, 
-  FaShieldAlt, 
-  FaChartLine, 
+import {
+  FaBriefcase,
+  FaCheckCircle,
+  FaCalendarAlt,
+  FaShieldAlt,
+  FaChartLine,
   FaBell,
   FaUsers,
   FaFileContract,
@@ -21,74 +21,72 @@ import {
   FaPhone,
   FaWhatsapp,
   FaEnvelope,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaUserTie
 } from 'react-icons/fa'
 import { Sparkles } from 'lucide-react'
+import ServicioCard from '@/components/ui/ServicioCard'
+import ServicioPreviewModal from '@/components/ui/ServicioPreviewModal'
+import { fetchServiciosPorLinea } from '@/lib/serviciosClient'
 
 
 const heroImage = '/images/servicios/corporativo.webp'
 const imagenCorporativa1 = '/images/servicios/In-House.webp'
-const imagenCorporativa2 = '/images/servicios/In-House.webp'
 const imagenCorporativa3 = '/images/servicios/Societario.webp'
-const imagenCorporativa4 = '/images/servicios/Compliance.webp'
-const imagenCorporativa5 = '/images/servicios/Contractual.webp'
-const imagenCorporativa6 = '/images/servicios/Laboral.webp'
+
+// Las 5 áreas son una decisión de estructura del sitio (icono + descripción).
+// Los SERVICIOS que aparecen dentro de cada una vienen de la BD (tabla `servicios`,
+// campo `subcategoria` asignado en el CMS) — agregar o quitar un servicio de un
+// área es entonces un cambio de contenido, no de código.
+const AREAS_META = [
+  {
+    subcategoria: 'Societario',
+    title: 'Societario',
+    icon: FaBriefcase,
+    description: 'Constitución, reformas y liquidación de sociedades. Estructuración corporativa y gobernanza empresarial.',
+  },
+  {
+    subcategoria: 'Compliance',
+    title: 'Compliance',
+    icon: FaShieldAlt,
+    description: 'Auditorías legales, cumplimiento normativo y prevención de riesgos regulatorios.',
+  },
+  {
+    subcategoria: 'Contractual',
+    title: 'Contractual',
+    icon: FaFileContract,
+    description: 'Elaboración, revisión y negociación de contratos y negocios jurídicos.',
+  },
+  {
+    subcategoria: 'Laboral',
+    title: 'Laboral',
+    icon: FaUsers,
+    description: 'Contratación, relaciones laborales y resolución de conflictos con empleados.',
+  },
+  {
+    subcategoria: 'Asesoría empresarial',
+    title: 'Asesoría Empresarial',
+    icon: FaUserTie,
+    description: 'Acompañamiento legal preventivo y estratégico para la toma de decisiones del negocio.',
+  },
+]
 
 const CorporativoPage = () => {
   const [activeTab, setActiveTab] = useState(0)
+  const [serviciosPorArea, setServiciosPorArea] = useState({})
+  const [loadingServicios, setLoadingServicios] = useState(true)
+  const [errorServicios, setErrorServicios] = useState(false)
+  const [previewServicio, setPreviewServicio] = useState(null)
 
-  const areas = [
-    { 
-      title: 'Societario', 
-      icon: FaBriefcase, 
-      description: 'Constitución, reformas y liquidación de sociedades. Estructuración corporativa y gobernanza empresarial.',
-      servicios: [
-        'Constitución de sociedades',
-        'Reformas estatutarias',
-        'Fusiones y adquisiciones',
-        'Liquidación de sociedades',
-        'Gobierno corporativo',
-        'Entre Otros Procesos'
-      ]
-    },
-    { 
-      title: 'Compliance / Cumplimiento', 
-      icon: FaShieldAlt, 
-      description: 'Auditorías legales, cumplimiento normativo y prevención de riesgos regulatorios.',
-      servicios: [
-        'Programas de cumplimiento',
-        'Auditorías legales',
-        'Prevención de lavado de activos',
-        'Protección de datos personales',
-        'Ética corporativa',
-        'Entre Otros Procesos'
-      ]
-    },
-    { 
-      title: 'Contractual', 
-      icon: FaFileContract, 
-      description: 'Elaboración, revisión y negociación de contratos y negocios jurídicos.',
-      servicios: [
-        'Contratos comerciales',
-        'Acuerdos de confidencialidad',
-        'Negociación contractual',
-        'Revisión de cláusulas',
-        'Entre Otros Procesos'
-      ]
-    },
-    { 
-      title: 'Laboral', 
-      icon: FaUsers, 
-      description: 'Contratación, relaciones laborales y resolución de conflictos con empleados.',
-      servicios: [
-        'Contratos laborales',
-        'Reglamentos internos',
-        'Resolución de conflictos',
-        'Auditorías laborales',
-        'Entre Otros Procesos'
-      ]
-    }
-  ]
+  // Servicios publicados de esta línea, agrupados por área — ver lib/serviciosClient.js
+  useEffect(() => {
+    let alive = true
+    fetchServiciosPorLinea('corporativo')
+      .then(({ porArea }) => { if (alive) setServiciosPorArea(porArea) })
+      .catch(() => { if (alive) setErrorServicios(true) })
+      .finally(() => { if (alive) setLoadingServicios(false) })
+    return () => { alive = false }
+  }, [])
 
   // DATOS ACTUALIZADOS PARA EL NUEVO DISEÑO
   const diferenciadores = [
@@ -147,12 +145,6 @@ const CorporativoPage = () => {
     }
   ]
 
-  const imagenesPorArea = [
-  imagenCorporativa3, // Se mostrará cuando activeTab sea 0
-  imagenCorporativa4, // Se mostrará cuando activeTab sea 1
-  imagenCorporativa5, // Se mostrará cuando activeTab sea 2
-  imagenCorporativa6  // Se mostrará cuando activeTab sea 3
-];
   return (
     <>
       <LazyMotion features={domAnimation}>
@@ -500,17 +492,17 @@ const CorporativoPage = () => {
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-4 sm:mb-6">
                   Áreas de <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-700">Especialización</span>
                 </h2>
-                
+
                 <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-600 max-w-3xl mx-auto px-4 sm:px-0">
-                  Los servicios de Litesco Corporativo se clasifican en cuatro áreas principales
+                  Los servicios de Litesco Corporativo se clasifican en cinco áreas principales
                 </p>
               </m.div>
 
               <div className="mb-8 sm:mb-10 lg:mb-12">
                 <div className="flex flex-wrap justify-center gap-2 sm:gap-3 lg:gap-4">
-                  {areas.map((area, index) => (
+                  {AREAS_META.map((area, index) => (
                     <m.button
-                      key={area.title}
+                      key={area.subcategoria}
                       onClick={() => setActiveTab(index)}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.98 }}
@@ -521,8 +513,7 @@ const CorporativoPage = () => {
                       }`}
                     >
                       <area.icon className={`inline mr-1.5 sm:mr-2 text-base sm:text-lg lg:text-xl ${activeTab === index ? 'text-white' : 'text-amber-600'}`} />
-                      <span className="hidden xs:inline">{area.title}</span>
-                      <span className="xs:hidden">{area.title.split(' ')[0]}</span>
+                      <span>{area.title}</span>
                     </m.button>
                   ))}
                 </div>
@@ -531,59 +522,72 @@ const CorporativoPage = () => {
               <AnimatePresence mode="wait">
                 <m.div
                   key={activeTab}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -40 }}
                   transition={{ duration: 0.3 }}
                   className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-12 shadow-2xl border-2 border-slate-200"
                 >
-                  <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
+                  <div className="grid lg:grid-cols-[minmax(0,300px)_1fr] gap-8 sm:gap-10 lg:gap-12">
                     <div>
                       <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                         <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0">
-                          {React.createElement(areas[activeTab].icon, { className: "text-xl sm:text-2xl lg:text-3xl text-white" })}
+                          {React.createElement(AREAS_META[activeTab].icon, { className: "text-xl sm:text-2xl lg:text-3xl text-white" })}
                         </div>
-                        <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900">{areas[activeTab].title}</h3>
+                        <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900">{AREAS_META[activeTab].title}</h3>
                       </div>
-                      
-                      <p className="text-sm sm:text-base md:text-lg lg:text-xl text-slate-600 leading-relaxed mb-6 sm:mb-8">
-                        {areas[activeTab].description}
-                      </p>
 
-                      <div className="bg-amber-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 border-l-4 border-amber-500">
-                        <h4 className="font-bold text-slate-900 mb-3 sm:mb-4 text-base sm:text-lg">Servicios incluidos:</h4>
-                        <ul className="space-y-2 sm:space-y-3">
-                          {areas[activeTab].servicios.map((servicio, idx) => (
-                            <m.li
-                              key={servicio}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.1 }}
-                              className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-slate-700"
-                            >
-                              <FaCheckCircle className="text-green-600 flex-shrink-0 text-sm sm:text-base" />
-                              <span>{servicio}</span>
-                            </m.li>
-                          ))}
-                        </ul>
-                      </div>
+                      <p className="text-sm sm:text-base md:text-lg lg:text-xl text-slate-600 leading-relaxed">
+                        {AREAS_META[activeTab].description}
+                      </p>
                     </div>
 
-                    <div className="relative h-[250px] sm:h-[350px] lg:h-[500px] rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
-                      <img 
-                        src={imagenesPorArea[activeTab]}
-                        alt={areas[activeTab].title}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+                    {/* Servicios del área — a un costado, cargados en vivo desde el CMS */}
+                    <div>
+                      {loadingServicios && (
+                        <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                          {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="h-24 rounded-2xl border-2 border-slate-100 bg-slate-50 animate-pulse" />
+                          ))}
+                        </div>
+                      )}
+
+                      {!loadingServicios && errorServicios && (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                          No pudimos cargar los servicios en este momento. Escríbenos por WhatsApp y con gusto te ayudamos.
+                        </div>
+                      )}
+
+                      {!loadingServicios && !errorServicios && (serviciosPorArea[AREAS_META[activeTab].subcategoria] || []).length === 0 && (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                          Estamos publicando el contenido de esta área. Escríbenos y con gusto te asesoramos igual.
+                        </div>
+                      )}
+
+                      <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                        {(serviciosPorArea[AREAS_META[activeTab].subcategoria] || []).map((servicio, idx) => (
+                          <m.div
+                            key={servicio.id}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.06 }}
+                          >
+                            <ServicioCard
+                              servicio={servicio}
+                              icon={AREAS_META[activeTab].icon}
+                              onClick={() => setPreviewServicio(servicio)}
+                            />
+                          </m.div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </m.div>
               </AnimatePresence>
             </div>
           </section>
+
+          <ServicioPreviewModal servicio={previewServicio} onClose={() => setPreviewServicio(null)} />
 
           {/* =======================================================
               DIFERENCIADORES CLAVE (SECCIÓN REDISEÑADA PROFESIONAL)

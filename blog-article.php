@@ -12,13 +12,7 @@ header('Cache-Control: public, max-age=1800, stale-while-revalidate=3600');
 header('Vary: Accept-Encoding');
 
 // ===== CONFIG =====
-$db_config = [
-    'host'     => 'localhost',
-    'dbname'   => 'myloptic1_litesco_blog',
-    'user'     => 'myloptic1_litesco_usr',
-    'password' => 'j}34Ik49W@10',
-    'charset'  => 'utf8mb4',
-];
+$db_config = require __DIR__ . '/db-config.php';
 // ===== EXTRAER SLUG =====
 $slug = '';
 if (!empty($_GET['slug'])) $slug = $_GET['slug'];
@@ -163,22 +157,32 @@ header('Content-Type: text/html; charset=UTF-8');
 <meta name="description" content="<?= $description ?>">
 <?php if ($keyword): ?><meta name="keywords" content="<?= $keyword ?>"><?php endif; ?>
 <meta name="author" content="<?= $author ?>">
-<link rel="canonical" href="<?= $canonical ?>">
+<link rel="canonical" href="<?= $e($canonical) ?>">
 <meta property="og:type" content="article">
 <meta property="og:title" content="<?= $title ?>">
 <meta property="og:description" content="<?= $description ?>">
-<meta property="og:url" content="<?= $canonical ?>">
+<meta property="og:url" content="<?= $e($canonical) ?>">
 <meta property="og:image" content="<?= $image ?>">
 <meta property="og:site_name" content="LITESCO">
 <meta property="og:locale" content="es_CO">
-<?php if ($date): ?><meta property="article:published_time" content="<?= $date ?>"><?php endif; ?>
+<?php if ($date): ?><meta property="article:published_time" content="<?= $e($date) ?>"><?php endif; ?>
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="<?= $title ?>">
 <meta name="twitter:description" content="<?= $description ?>">
 <meta name="twitter:image" content="<?= $image ?>">
 <link rel="icon" href="/favicon.webp" type="image/webp">
+<?php
+// Tipo de schema.org elegido en el CMS (paso "Clasificación" del editor de artículos).
+// Se emite UN solo @type aquí — combinar varios tipos de Article poco relacionados
+// (p.ej. NewsArticle + LegalArticle) en el mismo nodo es justamente el markup
+// "duplicado o conflictivo" que Google Rich Results desaconseja. Fallback a
+// BlogPosting para artículos guardados antes de que existiera esta columna.
+$schemaType = in_array($article['tipo_schema'] ?? '', ['BlogPosting', 'LegalArticle', 'NewsArticle'], true)
+    ? $article['tipo_schema']
+    : 'BlogPosting';
+?>
 <script type="application/ld+json"><?= json_encode([
-    '@context'=>'https://schema.org','@type'=>'BlogPosting',
+    '@context'=>'https://schema.org','@type'=>$schemaType,
     'headline'=>$article['seo_title']?:$article['title'],
     'description'=>$article['meta_desc']?:$article['excerpt'],
     'image'=>[
@@ -300,7 +304,7 @@ if (META_PIXEL_ID !== ''):
   fbq('init', '<?= $pid ?>');
   fbq('track', 'PageView');
   var eventId = 'vc_' + Date.now() + '_' + Math.random().toString(16).slice(2);
-  var contentName = '<?= addslashes($title) ?>', contentCategory = '<?= addslashes($catName) ?>';
+  var contentName = <?= json_encode($title, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, contentCategory = <?= json_encode($catName, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
   fbq('track', 'ViewContent', { content_name: contentName, content_category: contentCategory }, { eventID: eventId });
   fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
     method: 'POST',
@@ -811,23 +815,18 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
 
     <div style="width:44px;height:3px;background:linear-gradient(to right,#f59e0b,#d97706);border-radius:2px;margin-top:16px"></div>
 
-    <div class="art-hero-meta" itemscope itemtype="https://schema.org/NewsArticle">
-      <meta itemprop="headline" content="<?= $e($article['seo_title']?:$article['title']) ?>">
-      <meta itemprop="url" content="<?= $canonical ?>">
-      <?php if (!empty($article['image'])): ?><meta itemprop="image" content="<?= $e($article['image']) ?>"><?php endif; ?>
-      <span class="art-hero-meta-item" itemprop="author" itemscope itemtype="https://schema.org/Organization">
+    <?php /* Metadatos visuales del hero. Antes tenían microdata itemscope=NewsArticle
+      duplicando el mismo Article ya declarado en JSON-LD arriba (con un @type distinto
+      además) — quitado para no dejar datos estructurados duplicados/conflictivos en
+      la misma página; el JSON-LD es la única fuente de verdad para SEO aquí. */ ?>
+    <div class="art-hero-meta">
+      <span class="art-hero-meta-item">
         <svg viewBox="0 0 24 24" width="10" height="10" fill="#f59e0b"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <strong itemprop="name"><?= $author ?></strong>
-        <meta itemprop="url" content="https://litesco.com.co">
+        <strong><?= $author ?></strong>
       </span>
       <span class="art-hero-meta-item">
         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <time itemprop="datePublished" datetime="<?= $date ?>"><?= $dateFormatted ?></time>
-        <?php if (!empty($article['updated_at']) && $article['updated_at'] !== $date): ?>
-          <meta itemprop="dateModified" content="<?= $e($article['updated_at']) ?>">
-        <?php else: ?>
-          <meta itemprop="dateModified" content="<?= $date ?>">
-        <?php endif; ?>
+        <time datetime="<?= $e($date) ?>"><?= $e($dateFormatted) ?></time>
       </span>
       <span class="art-hero-meta-item">
         <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1233,7 +1232,7 @@ document.querySelectorAll('a[href*="wa.me"], a[href="/contacto"]').forEach(funct
   el.addEventListener('click', function() {
     if (!window.fbq) return;
     var eventId = 'lead_' + Date.now() + '_' + Math.random().toString(16).slice(2);
-    var contentName = '<?= addslashes($title) ?>';
+    var contentName = <?= json_encode($title, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     fbq('track', 'Lead', { content_name: contentName }, { eventID: eventId });
     fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
       method: 'POST',

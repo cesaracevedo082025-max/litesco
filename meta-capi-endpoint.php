@@ -13,10 +13,16 @@ require_once __DIR__ . '/lib/meta-capi.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
-// Mismo origen únicamente (mitiga abuso: eventos falsos inflando el Ads Manager)
-$origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
+// Mismo origen únicamente (mitiga abuso: eventos falsos inflando el Ads Manager).
+// Se compara el HOST real del origen, no una subcadena: antes 'litesco.com.co'
+// en cualquier parte de la URL (p.ej. https://evil.com/?x=litesco.com.co) pasaba.
 $allowedHost = 'litesco.com.co';
-if (strpos($origin, $allowedHost) === false) {
+$hostAllowed = function ($url) use ($allowedHost) {
+    $h = strtolower((string) parse_url((string) $url, PHP_URL_HOST));
+    return $h === $allowedHost || substr($h, -(strlen($allowedHost) + 1)) === '.' . $allowedHost;
+};
+$origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '';
+if (!$hostAllowed($origin)) {
     http_response_code(403);
     echo json_encode(['success' => false]);
     exit;
@@ -46,7 +52,7 @@ $pageUrl         = filter_var($body['page_url'] ?? '', FILTER_VALIDATE_URL) ?: n
 $contentName     = substr(trim((string) ($body['content_name'] ?? 'Contacto general')), 0, 120);
 $contentCategory = substr(trim((string) ($body['content_category'] ?? '')), 0, 120);
 
-if (!$eventId || !$pageUrl || strpos($pageUrl, $allowedHost) === false) {
+if (!$eventId || !$pageUrl || !$hostAllowed($pageUrl)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
     exit;

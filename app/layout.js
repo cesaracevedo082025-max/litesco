@@ -1,9 +1,6 @@
 import './globals.css'
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/layout/Footer'
-import WhatsAppButton from '@/components/ui/WhatsAppButton'
+import SiteChrome from '@/components/layout/SiteChrome'
 import ScrollToTop from '@/components/ui/ScrollToTop'
-import ConsentProvider from '@/components/ui/ConsentProvider'
 import JsonLd, { buildOrganizationSchema } from '@/components/seo/JsonLd'
 
 // ✅ SEO: Metadata global
@@ -91,15 +88,7 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning>
         <ScrollToTop />
-        <ConsentProvider />
-        <div className="min-h-screen bg-stone-950 text-stone-50">
-          <Navbar />
-          <main className="pt-20 bg-stone-900">
-            {children}
-          </main>
-          <WhatsAppButton />
-          <Footer />
-        </div>
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   )

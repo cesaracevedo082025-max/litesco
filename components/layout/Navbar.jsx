@@ -168,7 +168,7 @@ const Navbar = () => {
     >
       {/* ── Barra principal ─────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18 lg:h-20">
+        <div className="flex items-center justify-between h-16 sm:h-[4.5rem] lg:h-20">
 
           {/* Logo */}
           <Link
@@ -326,72 +326,77 @@ const Navbar = () => {
         role="dialog"
         aria-modal="true"
         aria-label="Menú de navegación"
-        className={`lg:hidden fixed inset-0 flex flex-col transition-all duration-500 ease-in-out ${
+        className={`lg:hidden fixed inset-0 overflow-y-auto overscroll-contain transition-all duration-500 ease-in-out ${
           isOpen
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none'
         }`}
-        style={{ background: '#0a1628', zIndex: 9999 }}
+        style={{ background: '#0a1628', zIndex: 9999, WebkitOverflowScrolling: 'touch' }}
       >
+        {/* min-h-full en lugar de h-full: si el contenido no cabe en pantallas
+            bajas, este contenedor crece y el overflow-y-auto de arriba
+            permite hacer scroll hasta el final en vez de recortar el menú. */}
+        <div className="min-h-full flex flex-col">
 
-        {/* ── LOGO + NOMBRE centrado arriba ─── */}
-        <div className={`flex flex-col justify-center items-center pt-14 pb-6 transition-all duration-700 delay-100 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
-          <Link href="/" aria-label="LITESCO — inicio" onClick={() => setIsOpen(false)} className="flex flex-col items-center gap-3">
-            <div className="relative rounded-full overflow-hidden w-20 h-20 border-2 border-amber-500/40 shadow-[0_0_32px_rgba(245,158,11,0.25)]">
-              <Image src="/favicon.webp" alt="LITESCO" width={80} height={80} priority className="w-full h-full object-cover" />
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-black tracking-[0.15em] text-white">LITESCO</span>
-              <div className="flex items-center gap-2">
-                <span className="h-px w-8 bg-amber-500/60 rounded-full" />
-                <span className="text-[9px] font-bold tracking-[0.22em] text-amber-500/70 uppercase">Litigio Estratégico</span>
-                <span className="h-px w-8 bg-amber-500/60 rounded-full" />
+          {/* ── LOGO + NOMBRE centrado arriba ─── */}
+          <div className={`flex flex-col justify-center items-center flex-shrink-0 pt-14 pb-6 transition-all duration-700 delay-100 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+            <Link href="/" aria-label="LITESCO — inicio" onClick={() => setIsOpen(false)} className="flex flex-col items-center gap-3">
+              <div className="relative rounded-full overflow-hidden w-20 h-20 border-2 border-amber-500/40 shadow-[0_0_32px_rgba(245,158,11,0.25)]">
+                <Image src="/favicon.webp" alt="LITESCO" width={80} height={80} priority className="w-full h-full object-cover" />
               </div>
-            </div>
-          </Link>
-        </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-2xl font-black tracking-[0.15em] text-white">LITESCO</span>
+                <div className="flex items-center gap-2">
+                  <span className="h-px w-8 bg-amber-500/60 rounded-full" />
+                  <span className="text-[9px] font-bold tracking-[0.22em] text-amber-500/70 uppercase">Litigio Estratégico</span>
+                  <span className="h-px w-8 bg-amber-500/60 rounded-full" />
+                </div>
+              </div>
+            </Link>
+          </div>
 
-        {/* ── LINKS centrados — con separadores ─── */}
-        <nav className="flex-1 flex flex-col justify-center px-10" aria-label="Menú principal móvil">
-          {[
-            { href: '/', label: 'Inicio' },
-            { href: '/sobre-nosotros', label: 'Nosotros' },
-            { href: '/corporativo', label: 'Corporativo' },
-            { href: '/litis', label: 'Litis' },
-            { href: '/recuperacion', label: 'Recuperación' },
-            { href: '/blog', label: 'Blog' },
-            { href: '/faq', label: 'FAQ' },
-            { href: '/contacto', label: 'Contacto' },
-          ].map(({ href, label }, i) => {
-            const active = isActive(href)
-            return (
-              <div
-                key={href}
-                className={`transition-all duration-500 ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6'}`}
-                style={{ transitionDelay: isOpen ? `${120 + i * 55}ms` : '0ms' }}
-              >
-                <Link
-                  href={href}
-                  onClick={() => setIsOpen(false)}
-                  className={`group flex items-center justify-center gap-3 text-center py-4 text-xl font-bold tracking-widest uppercase transition-colors duration-200 focus-visible:outline-none ${
-                    active ? 'text-amber-400' : 'text-white/85 hover:text-amber-400'
-                  }`}
+          {/* ── LINKS centrados — con separadores ─── */}
+          <nav className="flex-1 flex flex-col justify-center px-6 sm:px-10 py-2" aria-label="Menú principal móvil">
+            {[
+              { href: '/', label: 'Inicio' },
+              { href: '/sobre-nosotros', label: 'Nosotros' },
+              { href: '/corporativo', label: 'Corporativo' },
+              { href: '/litis', label: 'Litis' },
+              { href: '/recuperacion', label: 'Recuperación' },
+              { href: '/blog', label: 'Blog' },
+              { href: '/faq', label: 'FAQ' },
+              { href: '/contacto', label: 'Contacto' },
+            ].map(({ href, label }, i) => {
+              const active = isActive(href)
+              return (
+                <div
+                  key={href}
+                  className={`transition-all duration-500 ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6'}`}
+                  style={{ transitionDelay: isOpen ? `${120 + i * 55}ms` : '0ms' }}
                 >
-                  {label}
-                  {active && (
-                    <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)]" />
+                  <Link
+                    href={href}
+                    onClick={() => setIsOpen(false)}
+                    className={`group flex items-center justify-center gap-3 text-center py-3 sm:py-4 text-lg sm:text-xl font-bold tracking-widest uppercase transition-colors duration-200 focus-visible:outline-none ${
+                      active ? 'text-amber-400' : 'text-white/85 hover:text-amber-400'
+                    }`}
+                  >
+                    {label}
+                    {active && (
+                      <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,1)]" />
+                    )}
+                  </Link>
+                  {i < 7 && (
+                    <div aria-hidden="true" className="h-px mx-auto" style={{ width: '40%', background: 'rgba(255,255,255,0.07)' }} />
                   )}
-                </Link>
-                {i < 7 && (
-                  <div aria-hidden="true" className="h-px mx-auto" style={{ width: '40%', background: 'rgba(255,255,255,0.07)' }} />
-                )}
-              </div>
-            )
-          })}
-        </nav>
+                </div>
+              )
+            })}
+          </nav>
 
-        {/* Espaciado inferior */}
-        <div className="pb-10" />
+          {/* Espaciado inferior — incluye el safe-area del home indicator en iOS */}
+          <div className="flex-shrink-0 pb-8" style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }} />
+        </div>
       </div>
     </nav>
   )

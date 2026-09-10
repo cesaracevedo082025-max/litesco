@@ -6,7 +6,17 @@ const CONSENT_KEY = 'litesco_cookie_consent'
 
 export function getConsent() {
   if (typeof window === 'undefined') return null
-  try { return localStorage.getItem(CONSENT_KEY) } catch { return null }
+  try {
+    const ls = localStorage.getItem(CONSENT_KEY)
+    if (ls === 'true' || ls === 'false') return ls
+  } catch {}
+  // Fallback: derivar de la cookie (la que leen las páginas PHP: litesco_cookie_consent=1|0).
+  // Cubre el caso de localStorage limpiado o inaccesible.
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)litesco_cookie_consent=([01])/)
+    if (m) return m[1] === '1' ? 'true' : 'false'
+  } catch {}
+  return null
 }
 
 function setConsentCookie(value) {

@@ -29,6 +29,9 @@ import {
   FaChartPie
 } from 'react-icons/fa'
 import { Sparkles } from 'lucide-react'
+import ServicioCard from '@/components/ui/ServicioCard'
+import ServicioPreviewModal from '@/components/ui/ServicioPreviewModal'
+import { fetchServiciosPorLinea } from '@/lib/serviciosClient'
 
 
 const heroImage = '/images/fondos/fondoLitis.webp'
@@ -36,58 +39,40 @@ const imagenLitis1 = '/images/servicios/Que es Litesco Litis.webp'
 const imagenLitis2 = '/images/servicios/procesos.webp'
 const imagenLitis3 = '/images/servicios/Riesgos Legales.webp'
 
+// El `subcategoria` de cada área debe coincidir exactamente con SUBCATEGORIAS.litis
+// en views/ServiciosCMSPage.jsx: la página agrupa los servicios reales de esta línea
+// por ese mismo valor, así que agregar/quitar un servicio de un área es un cambio de
+// contenido en el CMS, no de código.
+const AREAS_META = [
+  { subcategoria: 'Procesos Civiles', title: 'Civil', icon: FaUsers, description: 'Conflictos patrimoniales, responsabilidad civil, acciones de tutela.' },
+  { subcategoria: 'Derecho Comercial', title: 'Comercial', icon: FaFileContract, description: 'Disputas mercantiles, societarias, títulos valores.' },
+  { subcategoria: 'Derecho Laboral', title: 'Laboral', icon: FaHandshake, description: 'Procesos laborales ordinarios, especiales y ejecutivos.' },
+  { subcategoria: 'Derecho Administrativo', title: 'Administrativo', icon: FaShieldAlt, description: 'Acciones contra el Estado, procesos disciplinarios.' },
+  { subcategoria: 'Superintendencias', title: 'Superintendencias', icon: FaBalanceScale, description: 'Acciones ante delegaturas jurisdiccionales de SIC y Superfinanciera.' },
+  { subcategoria: 'Otro', title: 'Otras áreas', icon: FaGavel, description: 'Contáctanos para consultar sobre tu caso específico.' },
+]
+
 const LitisPage = () => {
   // SOLUCIÓN: Fuerza a la página a cargar en la posición superior (0,0) apenas se abre
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
 
-  const [expandedArea, setExpandedArea] = useState(null)
+  const [activeArea, setActiveArea] = useState(0)
+  const [serviciosPorArea, setServiciosPorArea] = useState({})
+  const [loadingServicios, setLoadingServicios] = useState(true)
+  const [errorServicios, setErrorServicios] = useState(false)
+  const [previewServicio, setPreviewServicio] = useState(null)
 
-  const areas = [
-    { 
-      nombre: 'Civil', 
-      icon: FaUsers,
-      descripcion: 'Conflictos patrimoniales, responsabilidad civil, acciones de tutela.',
-      casos: ['Ejecutivos', 'Declarativos', 'Responsabilidad contractual y extracontractual', 'Divisorios', 'Prescripción adquisitiva de dominio (pertenencia)', 'Monitorio'],
-      color: 'from-amber-500 to-amber-600'
-    },
-    { 
-      nombre: 'Comercial', 
-      icon: FaFileContract,
-      descripcion: 'Disputas mercantiles, societarias, títulos valores.',
-      casos: ['Levantamiento del velo corporativo', 'Competencia desleal', 'Propiedad intelectual', 'Demandas ante la Superintendencia de sociedades', 'Acciones cambiarias', 'Controversias societarias'],
-      color: 'from-amber-500 to-amber-600'
-    },
-    { 
-      nombre: 'Laboral', 
-      icon: FaHandshake,
-      descripcion: 'Procesos laborales ordinarios, especiales y ejecutivos.',
-      casos: ['Despidos injustificados', 'Reclamaciones prestacionales', 'Acoso laboral', 'Accidentes de trabajo', 'Conflicto de derecho laboral colectivo'],
-      color: 'from-amber-500 to-amber-600'
-    },
-    { 
-      nombre: 'Administrativo', 
-      icon: FaShieldAlt,
-      descripcion: 'Acciones contra el Estado, procesos disciplinarios.',
-      casos: ['Nulidad y restablecimiento del derecho', 'Reparación directa', 'Acción de repetición', 'Acción popular y de grupo', 'Acción de tutela'],
-      color: 'from-amber-500 to-amber-600'
-    },
-    { 
-      nombre: 'Superintendencias', 
-      icon: FaBalanceScale, 
-      descripcion: 'Acciones ante delegaturas jurisdiccionales de SIC y Superfinanciera.',
-      casos: ['Protección al consumidor', 'Prácticas comerciales', 'Servicios financieros', 'Protección de datos'],
-      color: 'from-amber-500 to-amber-600'
-    },
-    { 
-      nombre: 'Otras áreas', 
-      icon: FaGavel, 
-      descripcion: 'Contáctanos para consultar sobre tu caso específico.',
-      casos: ['Consulta personalizada'],
-      color: 'from-slate-500 to-slate-600'
-    }
-  ]
+  // Servicios publicados de Litis, agrupados por área — ver lib/serviciosClient.js
+  useEffect(() => {
+    let alive = true
+    fetchServiciosPorLinea('litis')
+      .then(({ porArea }) => { if (alive) setServiciosPorArea(porArea) })
+      .catch(() => { if (alive) setErrorServicios(true) })
+      .finally(() => { if (alive) setLoadingServicios(false) })
+    return () => { alive = false }
+  }, [])
 
   const diferenciadores = [
     {
@@ -419,66 +404,91 @@ const LitisPage = () => {
                 </p>
               </m.div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {areas.map((area, index) => (
-                  <m.div
-                    key={area.nombre}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    className="relative group"
-                  >
-                    <m.div
-                      whileHover={{ y: -8 }}
-                      onClick={() => setExpandedArea(expandedArea === index ? null : index)}
-                      className="cursor-pointer rounded-3xl bg-gradient-to-br from-white to-amber-50 p-8 shadow-xl border-2 border-amber-200 hover:border-amber-400 transition-all duration-500 hover:shadow-2xl"
-                    >
-                      <div className="flex flex-col items-center text-center space-y-4">
-                        <m.div
-                          whileHover={{ rotate: 360, scale: 1.1 }}
-                          transition={{ duration: 0.6 }}
-                          className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${area.color} flex items-center justify-center shadow-lg`}
-                        >
-                          <area.icon className="text-3xl text-white" />
-                        </m.div>
-                        
-                        <div className="space-y-2">
-                          <h3 className="text-2xl font-black text-slate-900">{area.nombre}</h3>
-                          <p className="text-slate-600 leading-relaxed">{area.descripcion}</p>
+              <div className="grid lg:grid-cols-[280px_1fr] gap-4 lg:gap-8 items-start">
+                {/* Selector de áreas: se desplaza al costado izquierdo al elegir una */}
+                <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-visible -mx-6 px-6 lg:mx-0 lg:px-0 pb-2 lg:pb-0">
+                  {AREAS_META.map((area, index) => {
+                    const active = activeArea === index
+                    return (
+                      <button
+                        key={area.subcategoria}
+                        type="button"
+                        onClick={() => setActiveArea(index)}
+                        className={`flex flex-shrink-0 lg:flex-shrink lg:w-full items-center gap-3 rounded-2xl border-2 px-5 py-4 text-left transition-all duration-300 ${
+                          active
+                            ? 'bg-gradient-to-br from-amber-500 to-amber-600 border-amber-500 text-white shadow-xl'
+                            : 'bg-white border-amber-200 text-slate-700 hover:border-amber-400'
+                        }`}
+                      >
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${active ? 'bg-white/20' : 'bg-amber-100'}`}>
+                          <area.icon className={`text-lg ${active ? 'text-white' : 'text-amber-600'}`} />
                         </div>
+                        <span className="font-black text-sm sm:text-base whitespace-nowrap lg:whitespace-normal">{area.title}</span>
+                      </button>
+                    )
+                  })}
+                </div>
 
-                        <AnimatePresence mode="wait">
-                          {expandedArea === index && (
-                            <m.div
-                              initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                              animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
-                              exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                              transition={{ duration: 0.3, ease: "easeInOut" }}
-                              className="w-full pt-6 border-t border-amber-300 overflow-hidden"
-                            >
-                              <p className="text-sm font-bold text-slate-700 mb-4 text-left">Casos que atendemos:</p>
-                              <ul className="space-y-3 text-left">
-                                {area.casos.map((caso, idx) => (
-                                  <li key={idx} className="text-sm text-slate-600 flex items-start gap-3">
-                                    <FaCheckCircle className="text-green-600 flex-shrink-0 text-xs mt-1" />
-                                    <span className="leading-relaxed">{caso}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </m.div>
-                          )}
-                        </AnimatePresence>
-
-                        <button className="text-amber-600 hover:text-amber-700 text-sm font-semibold flex items-center gap-2 transition-colors mt-4">
-                          {expandedArea === index ? 'Ver menos' : 'Ver más'}
-                          <FaArrowRight className={`text-xs transition-transform duration-300 ${expandedArea === index ? 'rotate-90' : ''}`} />
-                        </button>
+                {/* Panel derecho: servicios del área seleccionada, cargados en vivo desde el CMS */}
+                <AnimatePresence mode="wait">
+                  <m.div
+                    key={activeArea}
+                    initial={{ opacity: 0, x: 40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -40 }}
+                    transition={{ duration: 0.3 }}
+                    className="rounded-3xl bg-gradient-to-br from-white to-amber-50 p-6 sm:p-8 lg:p-10 shadow-xl border-2 border-amber-200"
+                  >
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+                        {React.createElement(AREAS_META[activeArea].icon, { className: 'text-2xl text-white' })}
                       </div>
-                    </m.div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{AREAS_META[activeArea].title}</h3>
+                    </div>
+                    <p className="text-slate-600 leading-relaxed mb-6">{AREAS_META[activeArea].description}</p>
+
+                    {loadingServicios && (
+                      <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                        {[0, 1, 2, 3].map((i) => (
+                          <div key={i} className="h-24 rounded-2xl border-2 border-amber-100 bg-white/60 animate-pulse" />
+                        ))}
+                      </div>
+                    )}
+
+                    {!loadingServicios && errorServicios && (
+                      <div className="rounded-xl border border-dashed border-amber-300 bg-white/60 p-6 text-center text-sm text-slate-500">
+                        No pudimos cargar los servicios en este momento. Escríbenos por WhatsApp y con gusto te ayudamos.
+                      </div>
+                    )}
+
+                    {!loadingServicios && !errorServicios && (serviciosPorArea[AREAS_META[activeArea].subcategoria] || []).length === 0 && (
+                      <div className="rounded-xl border border-dashed border-amber-300 bg-white/60 p-6 text-center text-sm text-slate-500">
+                        Estamos publicando el contenido de esta área. Escríbenos y con gusto te asesoramos igual.
+                      </div>
+                    )}
+
+                    <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                      {(serviciosPorArea[AREAS_META[activeArea].subcategoria] || []).map((servicio, idx) => (
+                        <m.div
+                          key={servicio.id}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.06 }}
+                        >
+                          <ServicioCard
+                            servicio={servicio}
+                            icon={AREAS_META[activeArea].icon}
+                            iconPosition="end"
+                            onClick={() => setPreviewServicio(servicio)}
+                          />
+                        </m.div>
+                      ))}
+                    </div>
                   </m.div>
-                ))}
+                </AnimatePresence>
               </div>
+
+              <ServicioPreviewModal servicio={previewServicio} onClose={() => setPreviewServicio(null)} />
 
               <m.div
                 initial={{ opacity: 0, y: 20 }}

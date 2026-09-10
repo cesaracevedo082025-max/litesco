@@ -7,20 +7,18 @@
 require_once __DIR__ . '/lib/meta-capi.php';
 
 // ===== CONFIGURACIÓN =====
-$db_config = [
-    'host'     => 'localhost',
-    'dbname'   => 'myloptic1_litesco_blog',
-    'user'     => 'myloptic1_litesco_usr',
-    'password' => 'j}34Ik49W@10',
-    'charset'  => 'utf8mb4',
-];
+$db_config = require __DIR__ . '/db-config.php';
 
 // Email de destino
 $to_email = 'gerencia@litesco.com.co';
 $from_email = 'no-reply@litesco.com.co';
 
 // ===== CORS HEADERS =====
-header("Access-Control-Allow-Origin: *");
+$__allowedOrigins = ['https://litesco.com.co', 'https://www.litesco.com.co'];
+if (in_array($_SERVER['HTTP_ORIGIN'] ?? '', $__allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+    header('Vary: Origin');
+}
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
@@ -45,13 +43,17 @@ if (!$data) {
 }
 
 // ===== EXTRAER CAMPOS =====
-$nombre   = trim($data['nombre'] ?? '');
-$email    = trim($data['email'] ?? '');
-$telefono = trim($data['telefono'] ?? '');
-$mensaje  = trim($data['mensaje'] ?? '');
-$empresa  = trim($data['empresa'] ?? '');
-$servicio = trim($data['servicio'] ?? '');
+// Se eliminan saltos de línea de todos los campos: evita inyección de cabeceras
+// (CRLF) en el correo — especialmente $nombre, que va en el header Reply-To.
+$stripCrlf = fn($s) => trim(str_replace(["\r", "\n", "\0"], ' ', (string) $s));
+$nombre   = $stripCrlf($data['nombre'] ?? '');
+$email    = $stripCrlf($data['email'] ?? '');
+$telefono = $stripCrlf($data['telefono'] ?? '');
+$mensaje  = trim((string) ($data['mensaje'] ?? ''));
+$empresa  = $stripCrlf($data['empresa'] ?? '');
+$servicio = $stripCrlf($data['servicio'] ?? '');
 $source   = !empty($empresa) || !empty($servicio) ? 'home' : 'contacto';
+$ip       = $_SERVER['REMOTE_ADDR'] ?? '';
 // event_id generado en el navegador (ver ContactoPage.jsx/HomePage.jsx) para deduplicar
 // con el Pixel de navegador en Meta. Si no llega, se genera aquí como respaldo.
 $metaEventId = substr(trim((string) ($data['meta_event_id'] ?? '')), 0, 64) ?: generateMetaEventId('lead');
@@ -93,7 +95,6 @@ try {
 
     // 2. Guardar en form_submissions (log completo)
     $fullData = json_encode($data, JSON_UNESCAPED_UNICODE);
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     $stmt = $pdo->prepare("INSERT INTO form_submissions (form_type, data, ip_address) VALUES (?, ?, ?)");
     $stmt->execute([$source, $fullData, $ip]);
 
@@ -109,6 +110,17 @@ $emailSent = false;
 try {
     $subject = "Nuevo contacto desde litesco.com.co" . ($source === 'home' ? ' (Inicio)' : ' (Contacto)');
 
+    // Escapar TODO dato del usuario que se interpola en el HTML del correo
+    // (antes solo $mensaje se escapaba → inyección de HTML/enlaces en la bandeja).
+    $eh        = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    $nombreH   = $eh($nombre);
+    $emailH    = $eh($email);
+    $telefonoH = $eh($telefono);
+    $empresaH  = $eh($empresa);
+    $servicioH = $eh($servicio);
+    $contactIdH = $eh($contactId);
+    $ipH       = $eh($ip);
+
     // Construir cuerpo del email
     $body = "<html><body style='font-family:Arial,sans-serif;'>";
     $body .= "<div style='max-width:600px;margin:0 auto;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;'>";
@@ -122,24 +134,24 @@ try {
     // Datos
     $body .= "<div style='padding:24px;'>";
     $body .= "<table style='width:100%;border-collapse:collapse;'>";
-    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;width:120px;vertical-align:top;'>Nombre:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;'>{$nombre}</td></tr>";
-    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Email:</td><td style='padding:10px 0;'><a href='mailto:{$email}' style='color:#b45309;'>{$email}</a></td></tr>";
-    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Teléfono:</td><td style='padding:10px 0;'><a href='tel:{$telefono}' style='color:#b45309;'>{$telefono}</a></td></tr>";
+    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;width:120px;vertical-align:top;'>Nombre:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;'>{$nombreH}</td></tr>";
+    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Email:</td><td style='padding:10px 0;'><a href='mailto:{$emailH}' style='color:#b45309;'>{$emailH}</a></td></tr>";
+    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Teléfono:</td><td style='padding:10px 0;'><a href='tel:{$telefonoH}' style='color:#b45309;'>{$telefonoH}</a></td></tr>";
 
     if (!empty($empresa)) {
-        $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Empresa:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;'>{$empresa}</td></tr>";
+        $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Empresa:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;'>{$empresaH}</td></tr>";
     }
     if (!empty($servicio)) {
-        $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Servicio:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;'>{$servicio}</td></tr>";
+        $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Servicio:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;'>{$servicioH}</td></tr>";
     }
 
-    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Mensaje:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;line-height:1.6;'>" . nl2br(htmlspecialchars($mensaje)) . "</td></tr>";
+    $body .= "<tr><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:700;vertical-align:top;'>Mensaje:</td><td style='padding:10px 0;color:#0A1628;font-size:14px;line-height:1.6;'>" . nl2br(htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8')) . "</td></tr>";
     $body .= "</table>";
     $body .= "</div>";
 
     // Footer
     $body .= "<div style='background:#f8fafc;padding:14px 24px;border-top:1px solid #e2e8f0;'>";
-    $body .= "<p style='margin:0;color:#94a3b8;font-size:11px;'>ID de contacto: #{$contactId} — IP: {$ip} — " . date('Y-m-d H:i:s') . "</p>";
+    $body .= "<p style='margin:0;color:#94a3b8;font-size:11px;'>ID de contacto: #{$contactIdH} — IP: {$ipH} — " . date('Y-m-d H:i:s') . "</p>";
     $body .= "</div>";
 
     $body .= "</div></body></html>";
@@ -148,7 +160,10 @@ try {
     $headers  = "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
     $headers .= "From: LITESCO <{$from_email}>\r\n";
-    $headers .= "Reply-To: {$nombre} <{$email}>\r\n";
+    // $nombre y $email ya vienen sin CRLF (ver $stripCrlf arriba). El nombre se
+    // encierra entre comillas como display-name para no romper el header.
+    $replyName = '"' . str_replace('"', '', $nombre) . '"';
+    $headers .= "Reply-To: {$replyName} <{$email}>\r\n";
     $headers .= "X-Mailer: LITESCO-ContactForm/2.0\r\n";
 
     $emailSent = mail($to_email, $subject, $body, $headers);

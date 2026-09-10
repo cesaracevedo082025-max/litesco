@@ -1454,13 +1454,16 @@ const AE_FL = ({ num, label, hint, count, max, required }) => (
 const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
   const [form, setForm] = useState(article || {
     title:'', seoTitle:'', metaDesc:'', keyword:'', slug:'', excerpt:'', content: DEFAULT_CONTENT,
-    category:'civil', author:'Equipo LITESCO',
+    category:'civil', author:'Equipo LITESCO', tipoSchema:'BlogPosting',
     date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
     image:'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=800',
     altText:'', imagePosition:'top', featured:false, published:false, contentAlign:'center',
   })
   const [validationErrors, setValidationErrors] = useState({})
   const [isDirty, setIsDirty] = useState(false)
+  // Mientras el usuario no edite el Título SEO a mano, este sigue al H1
+  // automáticamente para que nunca quede vacío (y "se pierda" al publicar).
+  const seoTitleTouched = useRef(!!(article && article.seoTitle))
 
   const setField = (updates) => {
     setForm(p => ({ ...p, ...updates }))
@@ -1504,6 +1507,55 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
           </div>
         )}
         <AE_Card>
+          <AE_CardHead icon="✍️" title="Contenido del Artículo" subtitle="Editor visual con formato automático" />
+          <div style={{padding:'22px',display:'flex',flexDirection:'column',gap:'18px'}}>
+            <div>
+              <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:'8px'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                  <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'22px',height:'22px',borderRadius:'6px',background:'#0A1628',color:'#f59e0b',fontSize:'10px',fontWeight:900,flexShrink:0}}>1</span>
+                  <label style={{color:'#0A1628',fontSize:'13px',fontWeight:700}}>Título Principal (H1)<span style={{color:'#f59e0b',marginLeft:'3px'}}>*</span></label>
+                </div>
+                <span style={{fontSize:'11px',fontWeight:700,fontFamily:'monospace',color:h1Count>80?'#ef4444':h1Count>50?'#f59e0b':'#94a3b8'}}>{h1Count} car.</span>
+              </div>
+              <input style={{...AE_inputStyle,fontSize:'16px',fontWeight:700,padding:'13px 16px'}}
+                onFocus={AE_focusIn} onBlur={AE_focusOut}
+                value={form.title}
+                onChange={e => {
+                  const t=e.target.value
+                  const updates = { title:t, slug:!form.slug?generateSlug(t):form.slug }
+                  // El Título SEO sigue al H1 hasta que el usuario lo edite a mano
+                  if (!seoTitleTouched.current) updates.seoTitle = t
+                  setField(updates)
+                  setValidationErrors(p=>({...p,title:'',seoTitle:''}))
+                }}
+                placeholder="Ej: Contrato de arrendamiento verbal en Colombia: ¿qué debe pactarse?" />
+              {validationErrors.title && (
+                <div style={{marginTop:'6px',display:'flex',alignItems:'center',gap:'6px',color:'#ef4444',fontSize:'11px',fontWeight:600}}>
+                  <span>⚠</span> {validationErrors.title}
+                </div>
+              )}
+              {h1EqualsSeo && (
+                <div style={{display:'flex',alignItems:'center',gap:'5px',marginTop:'6px',padding:'6px 10px',borderRadius:'7px',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)'}}>
+                  <FaExclamationTriangle style={{color:'#f59e0b',fontSize:'11px',flexShrink:0}} />
+                  <span style={{fontSize:'11px',color:'#92400e',fontWeight:600}}>El H1 y el Título SEO son idénticos. Se recomienda variar la redacción para mejor posicionamiento.</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <AE_FL num="2" label="Cuerpo del Artículo" required />
+              <RichTextEditor value={form.content} onChange={val => setField({content:val})} seoTitle={form.seoTitle} />
+            </div>
+            <div>
+              <AE_FL num="3" label="Resumen / Extracto" hint="— aparece en las tarjetas del blog" />
+              <textarea rows={3} style={{...AE_inputStyle,resize:'none',lineHeight:'1.6'}}
+                onFocus={AE_focusIn} onBlur={AE_focusOut}
+                value={form.excerpt} onChange={e => setField({excerpt:e.target.value})}
+                placeholder="Breve resumen que el lector verá antes de abrir el artículo..." />
+            </div>
+          </div>
+        </AE_Card>
+
+        <AE_Card>
           <AE_CardHead icon="🔍" title="Optimización SEO" subtitle="Mejore la visibilidad en Google" />
           <div style={{padding:'22px'}}>
             <div style={{background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:'12px',padding:'18px',marginBottom:'20px'}}>
@@ -1525,9 +1577,9 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
               <div>
-                <AE_FL num="1" label="Título SEO (Meta Title)" required count={titleCount} max={60} />
+                <AE_FL num="4" label="Título SEO (Meta Title)" hint="— se copia del H1 hasta que lo edite" required count={titleCount} max={60} />
                 <input style={AE_inputStyle} value={form.seoTitle} onFocus={AE_focusIn} onBlur={AE_focusOut}
-                  onChange={e => { setField({seoTitle:e.target.value}); setValidationErrors(p=>({...p,seoTitle:''})) }}
+                  onChange={e => { seoTitleTouched.current = true; setField({seoTitle:e.target.value}); setValidationErrors(p=>({...p,seoTitle:''})) }}
                   placeholder="Ej: Contrato de Arrendamiento Colombia 2025 | LITESCO" />
                 {validationErrors.seoTitle && (
                   <div style={{marginTop:'6px',display:'flex',alignItems:'center',gap:'6px',color:'#ef4444',fontSize:'11px',fontWeight:600}}>
@@ -1536,7 +1588,7 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
                 )}
               </div>
               <div>
-                <AE_FL num="2" label="URL amigable (Slug)" hint="— generada automáticamente" />
+                <AE_FL num="5" label="URL amigable (Slug)" hint="— generada automáticamente" />
                 <div style={{display:'flex',alignItems:'center',background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:'10px',overflow:'hidden'}}>
                   <span style={{padding:'11px 12px',fontSize:'12px',color:'#94a3b8',whiteSpace:'nowrap',borderRight:'1px solid #e2e8f0',background:'#f1f5f9'}}>litesco.com.co/blog/</span>
                   <input style={{flex:1,border:'none',outline:'none',padding:'11px 12px',fontSize:'13px',color:'#f59e0b',fontFamily:'monospace',background:'transparent'}}
@@ -1545,60 +1597,18 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
                 </div>
               </div>
               <div>
-                <AE_FL num="3" label="Meta Descripción" required count={metaCount} max={160} />
+                <AE_FL num="6" label="Meta Descripción" required count={metaCount} max={160} />
                 <textarea rows={3} style={{...AE_inputStyle,resize:'none',lineHeight:'1.6'}}
                   onFocus={AE_focusIn} onBlur={AE_focusOut}
                   value={form.metaDesc} onChange={e => setField({metaDesc:e.target.value})}
                   placeholder="Resumen atractivo para Google que incluya la palabra clave principal..." />
               </div>
               <div>
-                <AE_FL num="4" label="Palabra Clave Principal" hint="— keyword focus" />
+                <AE_FL num="7" label="Palabra Clave Principal" hint="— keyword focus" />
                 <input style={AE_inputStyle} value={form.keyword} onFocus={AE_focusIn} onBlur={AE_focusOut}
                   onChange={e => setField({keyword:e.target.value})}
                   placeholder="Ej: contrato arrendamiento Colombia 2025" />
               </div>
-            </div>
-          </div>
-        </AE_Card>
-
-        <AE_Card>
-          <AE_CardHead icon="✍️" title="Contenido del Artículo" subtitle="Editor visual con formato automático" />
-          <div style={{padding:'22px',display:'flex',flexDirection:'column',gap:'18px'}}>
-            <div>
-              <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',marginBottom:'8px'}}>
-                <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
-                  <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'22px',height:'22px',borderRadius:'6px',background:'#0A1628',color:'#f59e0b',fontSize:'10px',fontWeight:900,flexShrink:0}}>5</span>
-                  <label style={{color:'#0A1628',fontSize:'13px',fontWeight:700}}>Título Principal (H1)<span style={{color:'#f59e0b',marginLeft:'3px'}}>*</span></label>
-                </div>
-                <span style={{fontSize:'11px',fontWeight:700,fontFamily:'monospace',color:h1Count>80?'#ef4444':h1Count>50?'#f59e0b':'#94a3b8'}}>{h1Count} car.</span>
-              </div>
-              <input style={{...AE_inputStyle,fontSize:'16px',fontWeight:700,padding:'13px 16px'}}
-                onFocus={AE_focusIn} onBlur={AE_focusOut}
-                value={form.title}
-                onChange={e => { const t=e.target.value; setField({title:t, slug:!form.slug?generateSlug(t):form.slug}); setValidationErrors(p=>({...p,title:''})) }}
-                placeholder="Ej: Contrato de arrendamiento verbal en Colombia: ¿qué debe pactarse?" />
-              {validationErrors.title && (
-                <div style={{marginTop:'6px',display:'flex',alignItems:'center',gap:'6px',color:'#ef4444',fontSize:'11px',fontWeight:600}}>
-                  <span>⚠</span> {validationErrors.title}
-                </div>
-              )}
-              {h1EqualsSeo && (
-                <div style={{display:'flex',alignItems:'center',gap:'5px',marginTop:'6px',padding:'6px 10px',borderRadius:'7px',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)'}}>
-                  <FaExclamationTriangle style={{color:'#f59e0b',fontSize:'11px',flexShrink:0}} />
-                  <span style={{fontSize:'11px',color:'#92400e',fontWeight:600}}>El H1 y el Título SEO son idénticos. Se recomienda variar la redacción para mejor posicionamiento.</span>
-                </div>
-              )}
-            </div>
-            <div>
-              <AE_FL num="6" label="Cuerpo del Artículo" required />
-              <RichTextEditor value={form.content} onChange={val => setField({content:val})} seoTitle={form.seoTitle} />
-            </div>
-            <div>
-              <AE_FL num="7" label="Resumen / Extracto" hint="— aparece en las tarjetas del blog" />
-              <textarea rows={3} style={{...AE_inputStyle,resize:'none',lineHeight:'1.6'}}
-                onFocus={AE_focusIn} onBlur={AE_focusOut}
-                value={form.excerpt} onChange={e => setField({excerpt:e.target.value})}
-                placeholder="Breve resumen que el lector verá antes de abrir el artículo..." />
             </div>
           </div>
         </AE_Card>
@@ -1638,6 +1648,18 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
                 onChange={e=>setField({category:e.target.value})}>
                 {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+            <div>
+              <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'0.5px'}}>Tipo de schema (SEO)</div>
+              <select style={{...AE_inputStyle,fontSize:'13px'}} value={form.tipoSchema || 'BlogPosting'} onFocus={AE_focusIn} onBlur={AE_focusOut}
+                onChange={e=>setField({tipoSchema:e.target.value})}>
+                <option value="BlogPosting">Blog general (BlogPosting)</option>
+                <option value="LegalArticle">Artículo legal (LegalArticle)</option>
+                <option value="NewsArticle">Noticia / anuncio (NewsArticle)</option>
+              </select>
+              <div style={{fontSize:'11px',color:'#94a3b8',marginTop:'4px',lineHeight:1.5}}>
+                Define el tipo de datos estructurados (JSON-LD) que Google recibe para este artículo. Usa "Artículo legal" para contenido explicativo de derecho — es lo más preciso para la mayoría de las notas del blog.
+              </div>
             </div>
             <div>
               <div style={{fontSize:'11px',fontWeight:700,color:'#64748b',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'0.5px'}}>Fecha de publicación</div>
@@ -2467,16 +2489,18 @@ const RelatedCarousel = ({ articles, onSelect, currentCat }) => {
   const [page, setPage] = useState(0)
   const [hovered, setHovered] = useState(null)
   const VISIBLE = 3
-  if (!articles.length) return null
-  const pool = articles.slice(0, 8)
-  const totalPages = Math.ceil(pool.length / VISIBLE)
+  const pool = (articles || []).slice(0, 8)
+  const totalPages = Math.max(1, Math.ceil(pool.length / VISIBLE))
   const visible = pool.slice(page * VISIBLE, page * VISIBLE + VISIBLE)
 
+  // El useEffect va SIEMPRE antes de cualquier return condicional (reglas de hooks).
   useEffect(() => {
-    if (hovered !== null) return
+    if (hovered !== null || totalPages <= 1) return
     const timer = setInterval(() => setPage(p => (p + 1) % totalPages), 5000)
     return () => clearInterval(timer)
   }, [totalPages, hovered])
+
+  if (!pool.length) return null
 
   return (
     <div style={{ marginTop:'8px' }}>
@@ -3681,6 +3705,7 @@ const BlogPage = () => {
   }
 
   useEffect(() => {
+    let alive = true
     const token = getAuthToken()
     if (token) {
       fetch(API_URL, {
@@ -3690,6 +3715,7 @@ const BlogPage = () => {
       })
         .then(r => r.json())
         .then(data => {
+          if (!alive) return
           if (data.success) {
             setIsAuthenticated(true)
           } else {
@@ -3701,6 +3727,7 @@ const BlogPage = () => {
           try { sessionStorage.removeItem(SESSION_TOKEN_KEY) } catch(e) {}
         })
     }
+    return () => { alive = false }
   }, [])
 
   // Reset pagination when search/filter changes
@@ -3715,8 +3742,8 @@ const BlogPage = () => {
         if (searchTerm) {
           const term = searchTerm.toLowerCase()
           const contentText = (a.content || '').replace(/<[^>]+>/g,' ').toLowerCase()
-          return a.title.toLowerCase().includes(term) || 
-                 a.excerpt.toLowerCase().includes(term) ||
+          return (a.title || '').toLowerCase().includes(term) ||
+                 (a.excerpt || '').toLowerCase().includes(term) ||
                  contentText.includes(term)
         }
         return true

@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   FaPlus, FaEdit, FaTrash, FaEye, FaEyeSlash, FaSave, FaSignOutAlt,
   FaArrowLeft, FaArrowRight, FaCheck, FaGlobeAmericas, FaSearch,
-  FaBriefcase, FaGavel, FaChartBar, FaImage, FaCode, FaRocket, FaTimes
+  FaBriefcase, FaGavel, FaChartBar, FaImage, FaCode, FaRocket, FaTimes,
+  FaEnvelope, FaLock, FaExclamationCircle, FaShieldAlt, FaSpinner, FaNewspaper
 } from 'react-icons/fa'
 
 const API_URL = 'https://www.litesco.com.co/servicios-api.php'
@@ -21,9 +22,10 @@ const SUBCATEGORIAS = {
     'Procesos Civiles', 'Derecho Comercial', 'Derecho Administrativo',
     'Derecho Laboral', 'Superintendencias', 'Defensa Judicial', 'Otro',
   ],
+  // Deben coincidir exactamente con AREAS_META en views/CorporativoPage.jsx: la
+  // página pública agrupa los servicios de esta línea por este mismo valor.
   corporativo: [
-    'Contratos Comerciales', 'Derecho Societario', 'Compliance y Riesgos',
-    'Derecho Laboral Empresarial', 'In-House Legal', 'Estructuración Corporativa', 'Otro',
+    'Societario', 'Compliance', 'Contractual', 'Laboral', 'Asesoría empresarial', 'Otro',
   ],
   recuperacion: [
     'Cobranza Extrajudicial', 'Cobranza Judicial', 'BPO Empresarial', 'Gestión de Cartera', 'Otro',
@@ -36,8 +38,9 @@ const PASOS = [
   { num: 3, label: 'Respuesta Rápida', icon: FaRocket      },
   { num: 4, label: 'Contenido',      icon: FaCode          },
   { num: 5, label: 'Multimedia',     icon: FaImage         },
-  { num: 6, label: 'Schema',         icon: FaBriefcase     },
-  { num: 7, label: 'Publicación',    icon: FaCheck         },
+  { num: 6, label: 'Artículos',      icon: FaNewspaper     },
+  { num: 7, label: 'Schema',         icon: FaBriefcase     },
+  { num: 8, label: 'Publicación',    icon: FaCheck         },
 ]
 
 function slugify(text) {
@@ -74,6 +77,7 @@ const EMPTY_FORM = {
   imagen_url: '',
   imagen_alt: '',
   nombre_servicio: '',
+  articulo_ids: [],
   area_cobertura: 'Bogotá, Colombia',
   cta_tipo: 'whatsapp',
   published: 0,
@@ -87,8 +91,10 @@ const EMPTY_FORM = {
 function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState('gerencia@litesco.com.co')
   const [pass, setPass] = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(false)
+  const [focused, setFocused] = useState(null) // 'email' | 'pass' | null
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -110,31 +116,150 @@ function LoginScreen({ onLogin }) {
     }
   }
 
+  const fieldWrap = { position: 'relative' }
+  const fieldIcon = { position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#475569', fontSize: 14, pointerEvents: 'none' }
+  const inputBase = (name, extraPadRight = 14) => ({
+    width: '100%',
+    background: '#020617',
+    border: `1px solid ${focused === name ? '#f59e0b' : '#1e293b'}`,
+    boxShadow: focused === name ? '0 0 0 3px rgba(245,158,11,0.12)' : 'none',
+    borderRadius: 10,
+    padding: `11px ${extraPadRight}px 11px 40px`,
+    color: '#fff',
+    fontSize: 14,
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color .2s ease, box-shadow .2s ease',
+  })
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0A1628', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 20, padding: 40, width: '100%', maxWidth: 420 }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', fontFamily: 'Montserrat, sans-serif' }}>LITESCO</div>
-          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2, marginTop: 4 }}>CMS Servicios</div>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#0A1628 0%,#0F2744 60%,#0A1628 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', overflow: 'hidden' }}>
+      {/* Decoración de fondo, consistente con el resto del sitio */}
+      <div style={{ position: 'absolute', top: '-10%', right: '-8%', width: 360, height: 360, borderRadius: '50%', background: 'rgba(245,158,11,0.08)', filter: 'blur(90px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-12%', left: '-8%', width: 420, height: 420, borderRadius: '50%', background: 'rgba(59,130,246,0.06)', filter: 'blur(100px)', pointerEvents: 'none' }} />
+
+      <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 20, padding: '40px 36px 32px', width: '100%', maxWidth: 420, position: 'relative', boxShadow: '0 24px 60px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
+        {/* Barra superior de acento */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg,#f59e0b,#d97706)' }} />
+
+        <div style={{ textAlign: 'center', marginBottom: 30 }}>
+          <div style={{ width: 56, height: 56, margin: '0 auto 16px', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(245,158,11,0.25)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
+            <img src="/favicon.webp" alt="LITESCO" width={56} height={56} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', fontFamily: 'Montserrat, sans-serif', letterSpacing: '-0.5px' }}>LITESCO</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 999, padding: '4px 12px' }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b' }} />
+            <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5 }}>CMS Servicios</span>
+          </div>
         </div>
+
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Email</label>
-            <input value={email} onChange={e => setEmail(e.target.value)} type="email" required
-              style={{ width: '100%', background: '#020617', border: '1px solid #1e293b', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none' }} />
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 7, textTransform: 'uppercase', letterSpacing: 1 }}>Email</label>
+            <div style={fieldWrap}>
+              <FaEnvelope style={{ ...fieldIcon, color: focused === 'email' ? '#f59e0b' : '#475569' }} />
+              <input
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onFocus={() => setFocused('email')}
+                onBlur={() => setFocused(null)}
+                type="email"
+                required
+                autoComplete="username"
+                placeholder="tu@litesco.com.co"
+                style={inputBase('email')}
+              />
+            </div>
           </div>
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Contraseña</label>
-            <input value={pass} onChange={e => setPass(e.target.value)} type="password" required
-              style={{ width: '100%', background: '#020617', border: '1px solid #1e293b', borderRadius: 10, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none' }} />
+
+          <div style={{ marginBottom: 22 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 7, textTransform: 'uppercase', letterSpacing: 1 }}>Contraseña</label>
+            <div style={fieldWrap}>
+              <FaLock style={{ ...fieldIcon, color: focused === 'pass' ? '#f59e0b' : '#475569' }} />
+              <input
+                value={pass}
+                onChange={e => setPass(e.target.value)}
+                onFocus={() => setFocused('pass')}
+                onBlur={() => setFocused(null)}
+                type={showPass ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                style={inputBase('pass', 42)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(s => !s)}
+                aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: 6, display: 'flex' }}
+              >
+                {showPass ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+              </button>
+            </div>
           </div>
-          {err && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', color: '#fca5a5', fontSize: 13, marginBottom: 16 }}>{err}</div>}
-          <button type="submit" disabled={loading}
-            style={{ width: '100%', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', borderRadius: 11, padding: '12px 0', color: '#020617', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+
+          {err && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', color: '#fca5a5', fontSize: 13, marginBottom: 18, lineHeight: 1.4 }}>
+              <FaExclamationCircle style={{ marginTop: 2, flexShrink: 0 }} />
+              <span>{err}</span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              background: loading ? '#334155' : 'linear-gradient(135deg,#f59e0b,#d97706)',
+              border: 'none',
+              borderRadius: 11,
+              padding: '13px 0',
+              color: loading ? '#94a3b8' : '#020617',
+              fontWeight: 800,
+              fontSize: 14,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: loading ? 'none' : '0 8px 24px rgba(245,158,11,0.25)',
+              transition: 'transform .15s ease, box-shadow .15s ease',
+            }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = 'translateY(-1px)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+          >
+            {loading ? <FaSpinner className="cms-spin" /> : null}
             {loading ? 'Entrando…' : 'Entrar al CMS'}
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 22, paddingTop: 18, borderTop: '1px solid #1e293b' }}>
+          <FaShieldAlt style={{ color: '#334155', fontSize: 11 }} />
+          <span style={{ color: '#475569', fontSize: 11 }}>Acceso exclusivo para administradores LITESCO</span>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 14 }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                window.history.back()
+              } else {
+                window.location.href = '/'
+              }
+            }}
+            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 12, fontWeight: 500, cursor: 'pointer', padding: 0 }}
+          >
+            ← Volver al sitio
+          </button>
+        </div>
       </div>
+
+      <style>{`
+        .cms-spin { animation: cms-spin-anim .8s linear infinite; }
+        @keyframes cms-spin-anim { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        input::placeholder { color: #334155; }
+      `}</style>
     </div>
   )
 }
@@ -145,11 +270,25 @@ function LoginScreen({ onLogin }) {
 function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading, token }) {
   const [filtro, setFiltro] = useState('')
   const [linea, setLinea] = useState('')
+  const [estado, setEstado] = useState('')
+  const [orden, setOrden] = useState('reciente')
 
-  const filtered = servicios.filter(s =>
-    (!linea || s.linea_negocio === linea) &&
-    (!filtro || s.h1.toLowerCase().includes(filtro.toLowerCase()) || s.slug.includes(filtro.toLowerCase()))
-  )
+  const estadoDe = (s) => s.status || (s.published ? 'publicado' : 'borrador')
+
+  const filtered = servicios
+    .filter(s =>
+      (!linea || s.linea_negocio === linea) &&
+      (!estado || estadoDe(s) === estado) &&
+      (!filtro || s.h1.toLowerCase().includes(filtro.toLowerCase()) || s.slug.includes(filtro.toLowerCase()) || (s.subcategoria || '').toLowerCase().includes(filtro.toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (orden === 'nombre-az') return a.h1.localeCompare(b.h1)
+      if (orden === 'nombre-za') return b.h1.localeCompare(a.h1)
+      if (orden === 'linea') return a.linea_negocio.localeCompare(b.linea_negocio) || a.h1.localeCompare(b.h1)
+      const fa = a.updated_at ? new Date(a.updated_at.replace(' ', 'T')).getTime() : 0
+      const fb = b.updated_at ? new Date(b.updated_at.replace(' ', 'T')).getTime() : 0
+      return orden === 'antiguo' ? fa - fb : fb - fa
+    })
 
   const lineaColor = { litis: '#ef4444', corporativo: '#3b82f6', recuperacion: '#10b981' }
 
@@ -166,10 +305,10 @@ function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading, to
   return (
     <div>
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ flex: '1 1 200px', position: 'relative' }}>
           <FaSearch style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: 13, pointerEvents: 'none' }} />
-          <input value={filtro} onChange={e => setFiltro(e.target.value)} placeholder="Buscar servicio…"
+          <input value={filtro} onChange={e => setFiltro(e.target.value)} placeholder="Buscar por título, slug o categoría…"
             style={{ width: '100%', background: '#fff', border: '1px solid #e8edf4', borderRadius: 10, padding: '10px 14px 10px 38px', color: '#0A1628', fontSize: 13, outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 6px rgba(10,22,40,0.04)' }} />
         </div>
         <select value={linea} onChange={e => setLinea(e.target.value)}
@@ -177,13 +316,34 @@ function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading, to
           <option value="">Todas las líneas</option>
           {LINEAS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
         </select>
+        <select value={estado} onChange={e => setEstado(e.target.value)}
+          style={{ background: '#fff', border: '1px solid #e8edf4', borderRadius: 10, padding: '10px 14px', color: '#0A1628', fontSize: 13, outline: 'none', boxShadow: '0 2px 6px rgba(10,22,40,0.04)' }}>
+          <option value="">Todos los estados</option>
+          <option value="publicado">Publicado</option>
+          <option value="borrador">Borrador</option>
+          <option value="programado">Programado</option>
+        </select>
+        <select value={orden} onChange={e => setOrden(e.target.value)}
+          style={{ background: '#fff', border: '1px solid #e8edf4', borderRadius: 10, padding: '10px 14px', color: '#0A1628', fontSize: 13, outline: 'none', boxShadow: '0 2px 6px rgba(10,22,40,0.04)' }}>
+          <option value="reciente">Más reciente primero</option>
+          <option value="antiguo">Más antiguo primero</option>
+          <option value="nombre-az">Nombre (A-Z)</option>
+          <option value="nombre-za">Nombre (Z-A)</option>
+          <option value="linea">Línea de negocio</option>
+        </select>
+      </div>
+
+      <div style={{ color: '#94a3b8', fontSize: 12, marginBottom: 12 }}>
+        {filtered.length} de {servicios.length} servicio{servicios.length !== 1 ? 's' : ''}
       </div>
 
       {loading && <div style={{ color: '#94a3b8', textAlign: 'center', padding: 40 }}>Cargando…</div>}
 
       {!loading && filtered.length === 0 && (
         <div style={{ color: '#94a3b8', textAlign: 'center', padding: 60, fontSize: 14, background: '#fff', borderRadius: 16, border: '1px solid #e8edf4' }}>
-          No hay servicios. Crea el primero con el botón <strong style={{ color: '#f59e0b' }}>+ Nuevo servicio</strong>.
+          {servicios.length === 0
+            ? <>No hay servicios. Crea el primero con el botón <strong style={{ color: '#f59e0b' }}>+ Nuevo servicio</strong>.</>
+            : 'Ningún servicio coincide con estos filtros.'}
         </div>
       )}
 
@@ -206,8 +366,13 @@ function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading, to
                 </span>
               )
             })()}
+            {srv.updated_at && (
+              <span style={{ color: '#b0bec5', fontSize: 11, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                {new Date(srv.updated_at.replace(' ', 'T')).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+            )}
             <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-              <button onClick={() => window.open(`/${srv.linea_negocio}/${srv.slug}?preview=${token}`, '_blank')} title="Ver página"
+              <button onClick={() => window.open(srv.published ? `/${srv.linea_negocio}/${srv.slug}` : `/${srv.linea_negocio}/${srv.slug}?preview=${token}`, '_blank')} title="Ver página"
                 style={{ background: '#f8fafc', border: '1px solid #e8edf4', borderRadius: 8, padding: '7px 10px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>
                 <FaEye />
               </button>
@@ -232,14 +397,41 @@ function ServiceList({ servicios, onNew, onEdit, onDelete, onToggle, loading, to
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WIZARD: 7 PASOS
+// WIZARD: 8 PASOS
 // ─────────────────────────────────────────────────────────────────────────────
-function ServiceWizard({ initial, onSave, onCancel, saving }) {
+function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
   const [paso, setPaso] = useState(1)
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initial })
   const [slugManual, setSlugManual] = useState(!!initial?.slug)
+  const [articulos, setArticulos] = useState([])
+  const [loadingArticulos, setLoadingArticulos] = useState(false)
+  const [artFiltro, setArtFiltro] = useState('')
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+
+  // Artículos del blog disponibles para asociar (paso 6)
+  useEffect(() => {
+    if (!token) return
+    setLoadingArticulos(true)
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list_articulos', token }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success) setArticulos(d.articulos || []) })
+      .catch(() => {})
+      .finally(() => setLoadingArticulos(false))
+  }, [token])
+
+  const toggleArticulo = (id) => {
+    const has = form.articulo_ids.includes(id)
+    set('articulo_ids', has ? form.articulo_ids.filter(x => x !== id) : [...form.articulo_ids, id])
+  }
+
+  const articulosFiltrados = articulos.filter(a =>
+    !artFiltro || a.title.toLowerCase().includes(artFiltro.toLowerCase())
+  )
 
   // Auto-slug desde seo_title
   useEffect(() => {
@@ -430,9 +622,12 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
                   {[
                     ['H2', '<h2>Título</h2>'],
                     ['H3', '<h3>Subtítulo</h3>'],
-                    ['💡', '<div data-callout="dorado"><div data-callout-title>Título</div><div data-callout-body>Texto</div></div>'],
+                    ['💡', '<div data-callout="dorado"><div data-callout-title>Título</div><div data-callout-body>Texto</div><a data-callout-link href="/contacto">Conocer más →</a></div>'],
                     ['✅', '<div data-callout="verde"><div data-callout-title>Título</div><div data-callout-body>Texto</div></div>'],
                     ['Lista', '<ul>\n  <li>Ítem</li>\n</ul>'],
+                    ['Ref. legal', '<span data-legal-ref>artículo XXX del Código Civil</span>'],
+                    ['Comparar', '<div data-block="compare">\n  <div data-compare-item>\n    <div data-compare-title>Título A</div>\n    <div data-compare-desc>Descripción A</div>\n  </div>\n  <div data-compare-item>\n    <div data-compare-title>Título B</div>\n    <div data-compare-desc>Descripción B</div>\n  </div>\n</div>'],
+                    ['Imagen+caption', '<figure>\n  <img src="https://ik.imagekit.io/litesco/..." alt="Descripción de la imagen">\n  <figcaption>Leyenda de la imagen</figcaption>\n</figure>'],
                   ].map(([lbl, snip]) => (
                     <button key={lbl} onClick={() => set('content', form.content + '\n' + snip)}
                       style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 6, padding: '4px 10px', color: '#f59e0b', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
@@ -504,8 +699,54 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
           </div>
         )}
 
-        {/* PASO 6: Schema */}
+        {/* PASO 6: Artículos del blog relacionados */}
         {paso === 6 && (
+          <div>
+            <h3 style={{ color: '#fff', fontWeight: 800, fontSize: 16, marginBottom: 6, fontFamily: 'Montserrat, sans-serif' }}>Paso 6 — Artículos del Blog Relacionados</h3>
+            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>Selecciona los artículos del blog que se mostrarán como "Artículos relacionados" en el lado derecho de esta página de servicio. Es opcional: si no seleccionas ninguno, el bloque no aparece.</p>
+
+            <div style={{ ...field, position: 'relative' }}>
+              <FaSearch style={{ position: 'absolute', left: 14, top: 13, color: '#475569', fontSize: 13, pointerEvents: 'none' }} />
+              <input value={artFiltro} onChange={e => setArtFiltro(e.target.value)} placeholder="Buscar artículo por título…"
+                style={{ ...inp, paddingLeft: 38 }} />
+            </div>
+
+            <div style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700, marginBottom: 10 }}>
+              {form.articulo_ids.length} artículo{form.articulo_ids.length !== 1 ? 's' : ''} seleccionado{form.articulo_ids.length !== 1 ? 's' : ''}
+            </div>
+
+            {loadingArticulos && <div style={{ color: '#64748b', fontSize: 13, padding: '20px 0' }}>Cargando artículos…</div>}
+            {!loadingArticulos && articulosFiltrados.length === 0 && (
+              <div style={{ color: '#475569', fontSize: 13, padding: '20px 0' }}>
+                {articulos.length === 0 ? 'Aún no hay artículos publicados en el blog.' : 'Ningún artículo coincide con la búsqueda.'}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 10, maxHeight: 440, overflowY: 'auto', paddingRight: 4 }}>
+              {articulosFiltrados.map(a => {
+                const sel = form.articulo_ids.includes(a.id)
+                return (
+                  <button key={a.id} type="button" onClick={() => toggleArticulo(a.id)}
+                    style={{ textAlign: 'left', display: 'flex', gap: 10, alignItems: 'center', background: sel ? 'rgba(245,158,11,0.1)' : '#020617', border: `2px solid ${sel ? '#f59e0b' : '#1e293b'}`, borderRadius: 12, padding: 10, cursor: 'pointer', transition: 'all .15s' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#1e293b' }}>
+                      {a.image ? <img src={a.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ color: '#fff', fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
+                      <div style={{ color: '#64748b', fontSize: 11, marginTop: 2, textTransform: 'capitalize' }}>{a.category}{!a.published ? ' · Borrador' : ''}</div>
+                    </div>
+                    <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${sel ? '#f59e0b' : '#334155'}`, background: sel ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {sel && <FaCheck style={{ fontSize: 9, color: '#020617' }} />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* PASO 7: Schema */}
+        {paso === 7 && (
           <div>
             <h3 style={{ color: '#fff', fontWeight: 800, fontSize: 16, marginBottom: 6, fontFamily: 'Montserrat, sans-serif' }}>Paso 6 — Parametrización de Datos Estructurados</h3>
             <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>El sistema genera el JSON-LD de LegalService automáticamente con estos datos. No necesitas tocar código.</p>
@@ -528,8 +769,8 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
           </div>
         )}
 
-        {/* PASO 7: Publicación */}
-        {paso === 7 && (
+        {/* PASO 8: Publicación */}
+        {paso === 8 && (
           <div>
             <h3 style={{ color: '#fff', fontWeight: 800, fontSize: 16, marginBottom: 6, fontFamily: 'Montserrat, sans-serif' }}>Paso 7 — Cierre de Conversión y Publicación</h3>
             <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>Configura el llamado a la acción y publica. Al publicar, la URL se añade al sitemap automáticamente.</p>
@@ -586,6 +827,7 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
                 ['H1', form.h1],
                 ['Título SEO', form.seo_title],
                 ['FAQs', `${form.faqs.length} preguntas`],
+                ['Artículos relacionados', `${form.articulo_ids.length} asociados`],
                 ['CTA', form.cta_tipo],
                 ['Estado', form.status === 'programado' ? `Programado · ${form.publish_at || 'sin fecha'}` : form.status],
               ].map(([k, v]) => (
@@ -606,7 +848,7 @@ function ServiceWizard({ initial, onSave, onCancel, saving }) {
           <FaArrowLeft /> {paso === 1 ? 'Cancelar' : 'Anterior'}
         </button>
 
-        {paso < 7 ? (
+        {paso < PASOS.length ? (
           <button onClick={() => canNext() && setPaso(p => p + 1)} disabled={!canNext()}
             style={{ display: 'flex', alignItems: 'center', gap: 8, background: canNext() ? 'linear-gradient(135deg,#f59e0b,#d97706)' : '#1e293b', border: 'none', borderRadius: 11, padding: '10px 24px', color: canNext() ? '#020617' : '#475569', fontWeight: 800, fontSize: 13, cursor: canNext() ? 'pointer' : 'not-allowed' }}>
             Siguiente <FaArrowRight />
@@ -680,7 +922,7 @@ export default function ServiciosCMSPage() {
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.message || 'Error al guardar')
-      showToast('Servicio guardado correctamente')
+      showToast(data.warning || 'Servicio guardado correctamente', !data.warning)
       setEditTarget(null)
       await loadServicios()
     } catch (e) {
@@ -804,7 +1046,7 @@ export default function ServiciosCMSPage() {
         {/* Content */}
         <div style={{ padding: 32, flex: 1 }}>
           {editTarget !== null ? (
-            <ServiceWizard initial={editTarget} onSave={handleSave} onCancel={() => setEditTarget(null)} saving={saving} />
+            <ServiceWizard initial={editTarget} onSave={handleSave} onCancel={() => setEditTarget(null)} saving={saving} token={token} />
           ) : (
             <>
               {/* Banner de bienvenida */}

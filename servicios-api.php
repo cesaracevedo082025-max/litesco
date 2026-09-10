@@ -3,28 +3,27 @@
  * LITESCO - API de servicios legales (CMS)
  * Maneja CRUD de páginas de servicios desde el panel administrativo.
  *
- * CAMBIAR LA CONTRASEÑA:
+ * CAMBIAR LA CONTRASEÑA (recomendado, en .env, NO en este archivo):
  *   php -r "echo password_hash('TuNuevaContraseña', PASSWORD_DEFAULT);"
- *   Luego reemplaza ADMIN_HASH abajo.
+ *   Pon el resultado en ADMIN_HASH del .env y el correo en ADMIN_EMAIL.
  */
 
-// ─── CONTRASEÑA ADMIN ───────────────────────────────────────────────────────
-// Hash de: Litesco2026!
-define('ADMIN_EMAIL', 'gerencia@litesco.com.co');
-define('ADMIN_HASH',  '$2b$10$tDjr04WKh4b2zHeBSO8CQO3dlCOmq2gyXaKCm.6XLaUOx4l4gY2B.'); // Litesco2026!
-
 // ─── BASE DE DATOS ───────────────────────────────────────────────────────────
-$db_config = [
-    'host'     => 'localhost',
-    'dbname'   => 'myloptic1_litesco_blog',
-    'user'     => 'myloptic1_litesco_usr',
-    'password' => 'j}34Ik49W@10',
-    'charset'  => 'utf8mb4',
-];
+$db_config = require __DIR__ . '/db-config.php';   // hace require_once de env.php
+
+// ─── CREDENCIALES ADMIN ─────────────────────────────────────────────────────
+// Se leen de .env (ADMIN_EMAIL / ADMIN_HASH). Los valores por defecto son un
+// respaldo temporal: define los reales en .env y ROTA la contraseña.
+define('ADMIN_EMAIL', env('ADMIN_EMAIL', 'gerencia@litesco.com.co'));
+define('ADMIN_HASH',  env('ADMIN_HASH',  '$2b$10$tDjr04WKh4b2zHeBSO8CQO3dlCOmq2gyXaKCm.6XLaUOx4l4gY2B.'));
 
 // ─── HEADERS ────────────────────────────────────────────────────────────────
 header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
+$__allowedOrigins = ['https://litesco.com.co', 'https://www.litesco.com.co'];
+if (in_array($_SERVER['HTTP_ORIGIN'] ?? '', $__allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+    header('Vary: Origin');
+}
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
@@ -39,8 +38,14 @@ function getDb($cfg) {
     ]);
 }
 
-// Crear tablas si no existen
+// Crear tablas si no existen.
+// Antes corría CREATE/ALTER en CADA request (incluido el GET público `list`). Ahora
+// un flag en disco la salta si ya se ejecutó en las últimas 24 h. Se sigue
+// ejecutando en cada deploy nuevo (flag ausente) y una vez al día como red de
+// seguridad. Si el flag no se puede escribir, se ejecuta siempre (fail-safe).
 function ensureTables($pdo) {
+    $flag = __DIR__ . '/cache/.servicios-schema-ok';
+    if (is_file($flag) && (time() - filemtime($flag)) < 86400) return;
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS servicios (
             id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -75,6 +80,30 @@ function ensureTables($pdo) {
             INDEX idx_expires (expires_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
+    // Relación normalizada servicio ↔ artículo del blog (tabla `articles`, misma BD).
+    // Sin FK a `articles`: esa tabla la administra blog-api.php de forma independiente;
+    // los huérfanos simplemente no aparecen porque las lecturas hacen INNER JOIN.
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS servicio_articulos (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            servicio_id INT NOT NULL,
+            articulo_id BIGINT NOT NULL,
+            orden       INT NOT NULL DEFAULT 0,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_servicio_articulo (servicio_id, articulo_id),
+            INDEX idx_servicio (servicio_id),
+            INDEX idx_articulo (articulo_id),
+            CONSTRAINT fk_sa_servicio FOREIGN KEY (servicio_id) REFERENCES servicios(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+    // Migración defensiva: la tabla pudo haberse creado antes con articulo_id INT,
+    // que trunca los ids de artículo (timestamps en milisegundos, escala BIGINT).
+    try {
+        $pdo->exec("ALTER TABLE servicio_articulos MODIFY COLUMN articulo_id BIGINT NOT NULL");
+    } catch (PDOException $e) {}
+    try {
+        $pdo->exec("DELETE FROM servicio_articulos WHERE articulo_id = 2147483647");
+    } catch (PDOException $e) {}
 
     // Migración defensiva: agregar status/publish_at si la tabla ya existía sin ellas
     try {
@@ -89,6 +118,9 @@ function ensureTables($pdo) {
     } catch (PDOException $e) {
         if (strpos($e->getMessage(), 'Duplicate column') === false) throw $e;
     }
+
+    // Esquema al día: marcar el flag para saltarnos el DDL las próximas 24 h.
+    @touch(__DIR__ . '/cache/.servicios-schema-ok');
 }
 
 // Publica automáticamente los servicios programados cuya fecha ya llegó
@@ -99,7 +131,8 @@ function promoteScheduled($pdo) {
 // Borra el HTML cacheado de un servicio (ver caché de página completa en servicios-articulo.php)
 function invalidateServiceCache($linea, $slug) {
     if (!$linea || !$slug) return;
-    $key  = preg_replace('/[^a-z0-9\-]/', '', "{$linea}-{$slug}");
+    // Debe coincidir con $cacheKey en servicios-articulo.php
+    $key  = preg_replace('/[^a-z0-9\-]/', '', "{$linea}-{$slug}") . '-' . substr(sha1("{$linea}/{$slug}"), 0, 10);
     $file = __DIR__ . "/cache/servicios/{$key}.html";
     if (is_file($file)) @unlink($file);
 }
@@ -163,7 +196,8 @@ try {
     ensureTables($pdo);
     promoteScheduled($pdo);
 } catch (PDOException $e) {
-    err('Error de base de datos: ' . $e->getMessage(), 500);
+    error_log('[servicios-api db init] ' . $e->getMessage());
+    err('Error de base de datos', 500);
 }
 
 // ─── ACCIONES PÚBLICAS ───────────────────────────────────────────────────────
@@ -174,19 +208,40 @@ if ($action === 'list' && $method === 'GET') {
     $isAdmin = $token && validateToken($pdo, $token);
     $where = $isAdmin ? '' : 'WHERE published = 1';
     $rows = $pdo->query("SELECT * FROM servicios $where ORDER BY linea_negocio, updated_at DESC")->fetchAll();
+
+    // Adjuntar los ids de artículos del blog asociados a cada servicio (una sola consulta)
+    $articulosPorServicio = [];
+    foreach ($pdo->query("SELECT servicio_id, articulo_id FROM servicio_articulos ORDER BY orden ASC") as $rel) {
+        $articulosPorServicio[$rel['servicio_id']][] = (int) $rel['articulo_id'];
+    }
+
     foreach ($rows as &$r) {
         if (isset($r['faqs'])) $r['faqs'] = json_decode($r['faqs'], true) ?: [];
+        $r['articulo_ids'] = $articulosPorServicio[$r['id']] ?? [];
     }
     ok(['servicios' => $rows]);
 }
 
 // POST login
 if ($action === 'login') {
+    require_once __DIR__ . '/lib/login-throttle.php';
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if (loginThrottleBlocked($ip)) {
+        usleep(500000);
+        err('Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.', 429);
+    }
     $email    = trim($body['email'] ?? '');
     $password = $body['password'] ?? '';
-    if ($email !== ADMIN_EMAIL || !password_verify($password, ADMIN_HASH)) {
+    // password_verify siempre se ejecuta (aunque el email no coincida) para no dar
+    // un oráculo de tiempo, y se añade un retardo fijo en el fallo para frenar la
+    // fuerza bruta online contra la única cuenta admin.
+    $passOk = password_verify($password, ADMIN_HASH);
+    if ($email !== ADMIN_EMAIL || !$passOk) {
+        loginThrottleFail($ip);
+        usleep(500000);
         err('Credenciales incorrectas', 401);
     }
+    loginThrottleReset($ip);
     $token = generateToken();
     createSession($pdo, $token);
     ok(['token' => $token]);
@@ -211,6 +266,28 @@ if (!validateToken($pdo, $token)) {
     err('No autorizado', 401);
 }
 
+// POST list_articulos — artículos del blog disponibles para asociar a un servicio (picker del CMS)
+if ($action === 'list_articulos') {
+    $stmt = $pdo->query("
+        SELECT a.id, a.title, a.slug, a.image, a.category, a.published
+        FROM articles a
+        INNER JOIN (SELECT slug, MAX(id) as max_id FROM articles GROUP BY slug) latest ON a.id = latest.max_id
+        ORDER BY a.date DESC, a.id DESC
+    ");
+    ok(['articulos' => $stmt->fetchAll()]);
+}
+
+// Sincroniza la tabla intermedia servicio_articulos con la lista de ids recibida del wizard
+function syncServicioArticulos($pdo, $servicioId, $articuloIds) {
+    $pdo->prepare("DELETE FROM servicio_articulos WHERE servicio_id = ?")->execute([$servicioId]);
+    $articuloIds = array_values(array_unique(array_filter(array_map('intval', $articuloIds))));
+    if (!$articuloIds) return;
+    $ins = $pdo->prepare("INSERT INTO servicio_articulos (servicio_id, articulo_id, orden) VALUES (?, ?, ?)");
+    foreach ($articuloIds as $orden => $articuloId) {
+        $ins->execute([$servicioId, $articuloId, $orden]);
+    }
+}
+
 // POST save — crear o actualizar servicio
 if ($action === 'save') {
     $id            = intval($body['id'] ?? 0);
@@ -231,6 +308,7 @@ if ($action === 'save') {
     $status        = $body['status'] ?? (!empty($body['published']) ? 'publicado' : 'borrador');
     $publish_at    = trim($body['publish_at'] ?? '');
     $publish_at    = $publish_at !== '' ? date('Y-m-d H:i:s', strtotime($publish_at)) : null;
+    $articulo_ids  = $body['articulo_ids'] ?? [];
 
     if (!in_array($linea, ['litis','corporativo','recuperacion'])) err('Línea de negocio inválida');
     if (!$slug) err('El slug es requerido');
@@ -264,7 +342,16 @@ if ($action === 'save') {
 
             if ($prevRow) invalidateServiceCache($prevRow['linea_negocio'], $prevRow['slug']);
             invalidateServiceCache($linea, $slug);
-            ok(['id' => $id, 'slug' => $slug]);
+
+            // El servicio ya se guardó; un fallo aquí no debe reportarse como si el
+            // servicio no se hubiera guardado (y mucho menos como "slug duplicado").
+            try {
+                syncServicioArticulos($pdo, $id, $articulo_ids);
+                ok(['id' => $id, 'slug' => $slug]);
+            } catch (PDOException $e) {
+                error_log('[servicios-api sync articulos] ' . $e->getMessage());
+                ok(['id' => $id, 'slug' => $slug, 'warning' => 'El servicio se guardó, pero no se pudieron asociar los artículos relacionados. Vuelve a seleccionarlos e intenta guardar de nuevo.']);
+            }
         } else {
             $stmt = $pdo->prepare("
                 INSERT INTO servicios
@@ -278,7 +365,15 @@ if ($action === 'save') {
                 $resumen,$h1,$content,$faqs,
                 $imagen_url,$imagen_alt,$nombre_srv,$area_cob,
                 $cta_tipo,$published,$status,$publish_at]);
-            ok(['id' => $pdo->lastInsertId(), 'slug' => $slug]);
+            $newId = $pdo->lastInsertId();
+
+            try {
+                syncServicioArticulos($pdo, $newId, $articulo_ids);
+                ok(['id' => $newId, 'slug' => $slug]);
+            } catch (PDOException $e) {
+                error_log('[servicios-api sync articulos] ' . $e->getMessage());
+                ok(['id' => $newId, 'slug' => $slug, 'warning' => 'El servicio se guardó, pero no se pudieron asociar los artículos relacionados. Vuelve a seleccionarlos e intenta guardar de nuevo.']);
+            }
         }
     } catch (PDOException $e) {
         if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
@@ -298,6 +393,7 @@ if ($action === 'delete') {
         $row->execute([$id]);
         $row = $row->fetch();
 
+        $pdo->prepare("DELETE FROM servicio_articulos WHERE servicio_id = ?")->execute([$id]);
         $stmt = $pdo->prepare("DELETE FROM servicios WHERE id = ?");
         $stmt->execute([$id]);
 
