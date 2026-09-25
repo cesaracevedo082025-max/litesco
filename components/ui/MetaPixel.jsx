@@ -71,7 +71,7 @@ export function trackLead(source) {
     window.fbq('track', 'Lead', { content_name: contentName }, { eventID: eventId })
   }
 
-  fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+  fetch('https://litesco.com.co/meta-capi-endpoint.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

@@ -81,7 +81,6 @@ export default function RootLayout({ children }) {
 
         {/* ✅ OPTIMIZACIÓN: DNS-prefetch */}
         <link rel="dns-prefetch" href="https://wa.me" />
-        <link rel="dns-prefetch" href="https://www.litesco.com.co" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
 
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

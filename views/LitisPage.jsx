@@ -508,7 +508,12 @@ const LitisPage = () => {
           </section>
 
           {/* PROCESO PASO A PASO CON IMAGEN */}
-          <section className="relative py-32 bg-gradient-to-b from-amber-50 to-white overflow-hidden">
+          <section className="relative py-32 bg-slate-950 overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[100px] -translate-y-1/2 -translate-x-1/2" />
+              <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-slate-800/20 rounded-full blur-[100px] translate-y-1/2 translate-x-1/2" />
+            </div>
+
             <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
               <m.div
                 initial={{ opacity: 0, y: 30 }}
@@ -516,11 +521,11 @@ const LitisPage = () => {
                 viewport={{ once: true }}
                 className="mb-16 text-center"
               >
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-6">
-                  Nuestro <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-700">Proceso</span>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6">
+                  Nuestro <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">Proceso</span>
                 </h2>
-                
-                <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+
+                <p className="text-xl text-slate-400 max-w-3xl mx-auto font-light">
                   De la consulta inicial a la ejecución de sentencia
                 </p>
               </m.div>
@@ -537,7 +542,7 @@ const LitisPage = () => {
                       whileHover={{ y: -8 }}
                       className="relative"
                     >
-                      <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-amber-200 hover:border-amber-400 transition-all duration-300 h-full">
+                      <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 backdrop-blur-sm hover:bg-slate-800/80 hover:border-amber-500/30 transition-all duration-300 h-full">
                         <div className="flex items-start gap-3 mb-4">
                           <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-amber-400 to-amber-600">
                             {paso.numero}
@@ -546,8 +551,8 @@ const LitisPage = () => {
                             <paso.icon className="text-xl text-white" />
                           </div>
                         </div>
-                        <h3 className="text-lg font-black text-slate-900 mb-2">{paso.titulo}</h3>
-                        <p className="text-slate-600 leading-relaxed text-sm">{paso.descripcion}</p>
+                        <h3 className="text-lg font-black text-white mb-2">{paso.titulo}</h3>
+                        <p className="text-slate-400 leading-relaxed text-sm">{paso.descripcion}</p>
                       </div>
                     </m.div>
                   ))}
@@ -560,28 +565,28 @@ const LitisPage = () => {
                   className="relative"
                 >
                   <div className="relative rounded-3xl overflow-hidden shadow-2xl h-[700px]">
-                    <img 
-                      src={imagenLitis2} 
-                      alt="Proceso legal profesional" 
+                    <img
+                      src={imagenLitis2}
+                      alt="Proceso legal profesional"
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent" />
-                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
+
                     <div className="absolute bottom-0 left-0 right-0 p-8">
-                      <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-8">
-                        <h3 className="text-2xl font-black text-slate-900 mb-4">Etapas Transparentes</h3>
-                        <p className="text-slate-700 mb-4 leading-relaxed">
+                      <div className="bg-slate-900/90 border border-slate-800 backdrop-blur-sm rounded-2xl p-8">
+                        <h3 className="text-2xl font-black text-white mb-4">Etapas Transparentes</h3>
+                        <p className="text-slate-300 mb-4 leading-relaxed">
                           Te acompañamos en cada etapa con total transparencia y comunicación directa, mediante:
                         </p>
                         <ul className="space-y-2">
-                          <li className="text-slate-700 flex items-start gap-2">
-                            <span className="text-amber-600 font-bold">•</span>
+                          <li className="text-slate-300 flex items-start gap-2">
+                            <span className="text-amber-500 font-bold">•</span>
                             <span>Mecanismos alternativos para solución de conflictos</span>
                           </li>
-                          <li className="text-slate-700 flex items-start gap-2">
-                            <span className="text-amber-600 font-bold">•</span>
+                          <li className="text-slate-300 flex items-start gap-2">
+                            <span className="text-amber-500 font-bold">•</span>
                             <span>Procesos judiciales</span>
                           </li>
                         </ul>

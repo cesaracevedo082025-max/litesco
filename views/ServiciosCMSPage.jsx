@@ -8,7 +8,7 @@ import {
   FaEnvelope, FaLock, FaExclamationCircle, FaShieldAlt, FaSpinner, FaNewspaper
 } from 'react-icons/fa'
 
-const API_URL = 'https://www.litesco.com.co/servicios-api.php'
+const API_URL = 'https://litesco.com.co/servicios-api.php'
 const SESSION_KEY = 'litesco_srv_token'
 
 const LINEAS = [
@@ -406,6 +406,9 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
   const [articulos, setArticulos] = useState([])
   const [loadingArticulos, setLoadingArticulos] = useState(false)
   const [artFiltro, setArtFiltro] = useState('')
+  const [artCategoria, setArtCategoria] = useState('')
+  const [artDesde, setArtDesde] = useState('')
+  const [artHasta, setArtHasta] = useState('')
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
 
@@ -429,9 +432,15 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
     set('articulo_ids', has ? form.articulo_ids.filter(x => x !== id) : [...form.articulo_ids, id])
   }
 
-  const articulosFiltrados = articulos.filter(a =>
-    !artFiltro || a.title.toLowerCase().includes(artFiltro.toLowerCase())
-  )
+  const artCategorias = [...new Set(articulos.map(a => a.category).filter(Boolean))].sort()
+
+  const articulosFiltrados = articulos.filter(a => {
+    if (artFiltro && !a.title.toLowerCase().includes(artFiltro.toLowerCase())) return false
+    if (artCategoria && a.category !== artCategoria) return false
+    if (artDesde && (!a.date || a.date < artDesde)) return false
+    if (artHasta && (!a.date || a.date > artHasta)) return false
+    return true
+  })
 
   // Auto-slug desde seo_title
   useEffect(() => {
@@ -495,8 +504,8 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
           const active = paso === p.num
           const Icon = p.icon
           return (
-            <button key={p.num} onClick={() => done && setPaso(p.num)} disabled={!done && paso !== p.num}
-              style={{ flex: '1 1 auto', minWidth: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 8px', background: 'none', border: 'none', borderBottom: active ? '2px solid #f59e0b' : '2px solid transparent', cursor: done ? 'pointer' : 'default', transition: 'all .2s' }}>
+            <button key={p.num} onClick={() => setPaso(p.num)}
+              style={{ flex: '1 1 auto', minWidth: 80, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '12px 8px', background: 'none', border: 'none', borderBottom: active ? '2px solid #f59e0b' : '2px solid transparent', cursor: 'pointer', transition: 'all .2s' }}>
               <div style={{ width: 28, height: 28, borderRadius: '50%', background: done ? '#10b981' : active ? '#f59e0b' : '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
                 {done ? <FaCheck style={{ color: '#fff', fontSize: 11 }} /> : <Icon style={{ color: active ? '#020617' : '#475569', fontSize: 11 }} />}
               </div>
@@ -554,7 +563,8 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
             <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>Lo que el usuario y Google ven en los resultados de búsqueda (SERP).</p>
             <div style={field}>
               <label style={label}>Título SEO * <span style={{ color: form.seo_title.length > 60 ? '#ef4444' : '#475569', fontWeight: 400 }}>({form.seo_title.length}/60)</span></label>
-              <input value={form.seo_title} onChange={e => set('seo_title', e.target.value)} maxLength={60} placeholder="Ej: Proceso Ejecutivo en Bogotá | LITESCO" style={inp} />
+              <input value={form.seo_title} onChange={e => set('seo_title', e.target.value)} maxLength={60} placeholder="Ej: Proceso Ejecutivo en Bogotá: Guía y Requisitos" style={inp} />
+              <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>"| LITESCO" se añade automáticamente al final, no lo escriba aquí.</div>
             </div>
             <div style={field}>
               <label style={label}>Slug URL *</label>
@@ -574,7 +584,7 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
             {form.seo_title && (
               <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', marginTop: 8 }}>
                 <div style={{ fontSize: 11, color: '#006621', marginBottom: 2 }}>litesco.com.co › {form.linea_negocio} › {form.slug}</div>
-                <div style={{ fontSize: 18, color: '#1a0dab', fontWeight: 400, marginBottom: 4 }}>{form.seo_title} | LITESCO</div>
+                <div style={{ fontSize: 18, color: '#1a0dab', fontWeight: 400, marginBottom: 4 }}>{form.seo_title.toUpperCase().includes('LITESCO') ? form.seo_title : `${form.seo_title} | LITESCO`}</div>
                 <div style={{ fontSize: 13, color: '#545454', lineHeight: 1.5 }}>{form.meta_desc || 'Escribe la meta descripción arriba…'}</div>
               </div>
             )}
@@ -711,8 +721,34 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
                 style={{ ...inp, paddingLeft: 38 }} />
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 10, marginBottom: 12 }}>
+              <div>
+                <label style={label}>Categoría</label>
+                <select value={artCategoria} onChange={e => setArtCategoria(e.target.value)} style={inp}>
+                  <option value="">Todas</option>
+                  {artCategorias.map(c => <option key={c} value={c} style={{ textTransform: 'capitalize' }}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={label}>Desde</label>
+                <input type="date" value={artDesde} onChange={e => setArtDesde(e.target.value)} style={{ ...inp, colorScheme: 'dark' }} />
+              </div>
+              <div>
+                <label style={label}>Hasta</label>
+                <input type="date" value={artHasta} onChange={e => setArtHasta(e.target.value)} style={{ ...inp, colorScheme: 'dark' }} />
+              </div>
+            </div>
+
+            {(artFiltro || artCategoria || artDesde || artHasta) && (
+              <button type="button" onClick={() => { setArtFiltro(''); setArtCategoria(''); setArtDesde(''); setArtHasta('') }}
+                style={{ background: 'none', border: 'none', color: '#f59e0b', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', padding: 0, marginBottom: 14 }}>
+                Limpiar filtros
+              </button>
+            )}
+
             <div style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700, marginBottom: 10 }}>
               {form.articulo_ids.length} artículo{form.articulo_ids.length !== 1 ? 's' : ''} seleccionado{form.articulo_ids.length !== 1 ? 's' : ''}
+              <span style={{ color: '#475569', fontWeight: 600, marginLeft: 8 }}>· {articulosFiltrados.length} resultado{articulosFiltrados.length !== 1 ? 's' : ''}</span>
             </div>
 
             {loadingArticulos && <div style={{ color: '#64748b', fontSize: 13, padding: '20px 0' }}>Cargando artículos…</div>}
@@ -733,7 +769,7 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ color: '#fff', fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
-                      <div style={{ color: '#64748b', fontSize: 11, marginTop: 2, textTransform: 'capitalize' }}>{a.category}{!a.published ? ' · Borrador' : ''}</div>
+                      <div style={{ color: '#64748b', fontSize: 11, marginTop: 2, textTransform: 'capitalize' }}>{a.category}{a.date ? ` · ${a.date}` : ''}{!a.published ? ' · Borrador' : ''}</div>
                     </div>
                     <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${sel ? '#f59e0b' : '#334155'}`, background: sel ? '#f59e0b' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {sel && <FaCheck style={{ fontSize: 9, color: '#020617' }} />}
@@ -775,21 +811,6 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
             <h3 style={{ color: '#fff', fontWeight: 800, fontSize: 16, marginBottom: 6, fontFamily: 'Montserrat, sans-serif' }}>Paso 7 — Cierre de Conversión y Publicación</h3>
             <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>Configura el llamado a la acción y publica. Al publicar, la URL se añade al sitemap automáticamente.</p>
             <div style={field}>
-              <label style={label}>Tipo de CTA (Call to Action)</label>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {[
-                  { id: 'whatsapp', label: 'WhatsApp' },
-                  { id: 'formulario', label: 'Formulario de contacto' },
-                  { id: 'ambos', label: 'WhatsApp + Formulario' },
-                ].map(c => (
-                  <button key={c.id} onClick={() => set('cta_tipo', c.id)}
-                    style={{ flex: '1 1 140px', border: `2px solid ${form.cta_tipo === c.id ? '#f59e0b' : '#1e293b'}`, borderRadius: 12, padding: '12px 16px', background: form.cta_tipo === c.id ? 'rgba(245,158,11,0.1)' : '#020617', color: form.cta_tipo === c.id ? '#f59e0b' : '#475569', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all .2s' }}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div style={field}>
               <label style={label}>Estado de publicación</label>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {[
@@ -828,7 +849,6 @@ function ServiceWizard({ initial, onSave, onCancel, saving, token }) {
                 ['Título SEO', form.seo_title],
                 ['FAQs', `${form.faqs.length} preguntas`],
                 ['Artículos relacionados', `${form.articulo_ids.length} asociados`],
-                ['CTA', form.cta_tipo],
                 ['Estado', form.status === 'programado' ? `Programado · ${form.publish_at || 'sin fecha'}` : form.status],
               ].map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', gap: 12, marginBottom: 8, fontSize: 13 }}>

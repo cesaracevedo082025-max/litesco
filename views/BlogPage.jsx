@@ -355,7 +355,7 @@ const DEFAULT_ARTICLES = [
 
 const STORAGE_KEY = 'litesco_blog_articles_v3_seo' 
 const SESSION_TOKEN_KEY = 'litesco_auth_token'
-const API_URL = 'https://www.litesco.com.co/blog-api.php'
+const API_URL = 'https://litesco.com.co/blog-api.php'
 
 // Helper: obtener token de sesión (retorna string o null)
 const getAuthToken = () => {
@@ -994,7 +994,7 @@ const RichTextEditor = ({ value, onChange, seoTitle = '' }) => {
     editorRef.current.focus()
     const sel = window.getSelection()
     let selectedText = sel.toString()
-    const url = prompt('🔗 Ingrese la URL del enlace (ej: https://www.litesco.com.co):')
+    const url = prompt('🔗 Ingrese la URL del enlace (ej: https://litesco.com.co):')
     if (!url) return
     let text = selectedText
     if (!text) {
@@ -1475,6 +1475,7 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
   const h1Count    = form.title?.length || 0
   const h1EqualsSeo = form.title?.trim() && form.seoTitle?.trim() &&
     form.title.trim().toLowerCase() === form.seoTitle.trim().toLowerCase()
+  const h1HasBrand = form.title?.toUpperCase().includes('LITESCO')
 
   const handleSubmit = e => {
     e.preventDefault()
@@ -1534,6 +1535,12 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
                   <span>⚠</span> {validationErrors.title}
                 </div>
               )}
+              {h1HasBrand && (
+                <div style={{display:'flex',alignItems:'center',gap:'5px',marginTop:'6px',padding:'6px 10px',borderRadius:'7px',background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)'}}>
+                  <FaExclamationTriangle style={{color:'#ef4444',fontSize:'11px',flexShrink:0}} />
+                  <span style={{fontSize:'11px',color:'#991b1b',fontWeight:600}}>No incluya "LITESCO" en el H1: se añade solo al título SEO de Google, no debe aparecer en el encabezado del artículo.</span>
+                </div>
+              )}
               {h1EqualsSeo && (
                 <div style={{display:'flex',alignItems:'center',gap:'5px',marginTop:'6px',padding:'6px 10px',borderRadius:'7px',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)'}}>
                   <FaExclamationTriangle style={{color:'#f59e0b',fontSize:'11px',flexShrink:0}} />
@@ -1568,7 +1575,9 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
                 </div>
               </div>
               <div style={{fontSize:'18px',color:'#1a0dab',fontWeight:500,marginBottom:'4px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                {form.seoTitle || 'Título SEO | LITESCO'}
+                {form.seoTitle
+                  ? (form.seoTitle.toUpperCase().includes('LITESCO') ? form.seoTitle : `${form.seoTitle} | LITESCO`)
+                  : 'Título SEO | LITESCO'}
               </div>
               <div style={{fontSize:'13px',color:'#4d5156',lineHeight:'1.5',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>
                 <span style={{color:'#94a3b8'}}>{new Date(form.date).toLocaleDateString('es-CO')} — </span>
@@ -1577,10 +1586,10 @@ const ArticleEditor = ({ article, onSave, onCancel, isSaving = false }) => {
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
               <div>
-                <AE_FL num="4" label="Título SEO (Meta Title)" hint="— se copia del H1 hasta que lo edite" required count={titleCount} max={60} />
+                <AE_FL num="4" label="Título SEO (Meta Title)" hint="— se copia del H1; '| LITESCO' se añade solo, no lo escriba aquí" required count={titleCount} max={60} />
                 <input style={AE_inputStyle} value={form.seoTitle} onFocus={AE_focusIn} onBlur={AE_focusOut}
                   onChange={e => { seoTitleTouched.current = true; setField({seoTitle:e.target.value}); setValidationErrors(p=>({...p,seoTitle:''})) }}
-                  placeholder="Ej: Contrato de Arrendamiento Colombia 2025 | LITESCO" />
+                  placeholder="Ej: Contrato de Arrendamiento Colombia 2025: Requisitos y Validez" />
                 {validationErrors.seoTitle && (
                   <div style={{marginTop:'6px',display:'flex',alignItems:'center',gap:'6px',color:'#ef4444',fontSize:'11px',fontWeight:600}}>
                     <span>⚠</span> {validationErrors.seoTitle}
@@ -3187,11 +3196,11 @@ const SmartSidebar = ({ content, article }) => {
     "publisher": {
       "@type": "Organization",
       "name": "LITESCO",
-      "logo": { "@type": "ImageObject", "url": "https://www.litesco.com.co/favicon.webp" }
+      "logo": { "@type": "ImageObject", "url": "https://litesco.com.co/favicon.webp" }
     },
     "datePublished": article.date,
     "image": article.image,
-    "url": `https://www.litesco.com.co/blog/${article.slug}`
+    "url": `https://litesco.com.co/blog/${article.slug}`
   } : null
 
   const readTimeMin = article?.content ? Math.max(1, Math.round(article.content.replace(/<[^>]+>/g,' ').trim().split(/\s+/).length / 200)) : null
@@ -3413,7 +3422,7 @@ const ArticleView = React.memo(({ selectedId, articles, onClose, onSelect }) => 
         </div>
       )}
 
-      <SEO title={article.seoTitle || article.title} description={article.metaDesc || article.excerpt} keywords={article.keyword} ogImage={article.image} ogType="article" articlePublishedTime={article.date} articleAuthor={article.author} canonical={`https://www.litesco.com.co/blog/${article.slug}`} />
+      <SEO title={article.seoTitle || article.title} description={article.metaDesc || article.excerpt} keywords={article.keyword} ogImage={article.image} ogType="article" articlePublishedTime={article.date} articleAuthor={article.author} canonical={`https://litesco.com.co/blog/${article.slug}`} />
 
       {/* ─── HERO CABECERA FULL-WIDTH ────────────────────────── */}
       <style>{`
@@ -3488,10 +3497,11 @@ const ArticleView = React.memo(({ selectedId, articles, onClose, onSelect }) => 
         <div style={{ maxWidth:'1320px', margin:'0 auto', padding:'clamp(12px,2vw,18px) clamp(14px,2.5vw,24px) 0' }}>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
             "@context":"https://schema.org","@type":"BreadcrumbList",
+            "name":article.title,
             "itemListElement":[
-              {"@type":"ListItem","position":1,"name":"Inicio","item":"https://www.litesco.com.co"},
-              {"@type":"ListItem","position":2,"name":"Blog","item":"https://www.litesco.com.co/blog"},
-              {"@type":"ListItem","position":3,"name":article.title,"item":`https://www.litesco.com.co/blog/${article.slug}`}
+              {"@type":"ListItem","position":1,"name":"Inicio","item":"https://litesco.com.co"},
+              {"@type":"ListItem","position":2,"name":"Blog","item":"https://litesco.com.co/blog"},
+              {"@type":"ListItem","position":3,"name":article.title,"item":`https://litesco.com.co/blog/${article.slug}`}
             ]
           })}} />
           <nav aria-label="Breadcrumb" style={{ display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap', minWidth:0 }}>
@@ -3924,12 +3934,12 @@ const BlogPage = () => {
         "@type": "Blog",
         "name": "Blog Jurídico LITESCO",
         "description": "Análisis legal, noticias jurídicas y guías especializadas en derecho colombiano.",
-        "url": "https://www.litesco.com.co/blog",
+        "url": "https://litesco.com.co/blog",
         "publisher": {
           "@type": "Organization",
           "name": "LITESCO — Litigio Estratégico Colombiano",
-          "url": "https://www.litesco.com.co",
-          "logo": { "@type": "ImageObject", "url": "https://www.litesco.com.co/favicon.webp" },
+          "url": "https://litesco.com.co",
+          "logo": { "@type": "ImageObject", "url": "https://litesco.com.co/favicon.webp" },
           "contactPoint": { "@type": "ContactPoint", "telephone": "+57-313-203-7572", "contactType": "customer service", "areaServed": "CO" }
         }
       })}} />

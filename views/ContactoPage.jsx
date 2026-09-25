@@ -102,7 +102,7 @@ const ContactoPage = () => {
     const metaEventId = generateEventId('lead')
 
     try {
-      const response = await fetch('https://www.litesco.com.co/send-email-simple.php', {
+      const response = await fetch('https://litesco.com.co/send-email-simple.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

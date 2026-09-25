@@ -8,14 +8,39 @@
  *   Pon el resultado en ADMIN_HASH del .env y el correo en ADMIN_EMAIL.
  */
 
+// ─── RED DE SEGURIDAD: nunca responder un body vacío ─────────────────────────
+// Un error fatal de PHP (fuera de un try/catch, o en un require) deja la
+// respuesta HTTP sin contenido, y el frontend truena con "Unexpected end of
+// JSON input" en vez de mostrar el error real. Esto convierte cualquier fatal
+// en un JSON válido y lo deja en el log del servidor para diagnosticarlo.
+set_exception_handler(function ($e) {
+    error_log('[servicios-api uncaught] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=UTF-8');
+    }
+    echo json_encode(['success' => false, 'message' => 'Error interno del servidor'], JSON_UNESCAPED_UNICODE);
+});
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        error_log('[servicios-api fatal] ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=UTF-8');
+        }
+        echo json_encode(['success' => false, 'message' => 'Error interno del servidor'], JSON_UNESCAPED_UNICODE);
+    }
+});
+
 // ─── BASE DE DATOS ───────────────────────────────────────────────────────────
 $db_config = require __DIR__ . '/db-config.php';   // hace require_once de env.php
 
 // ─── CREDENCIALES ADMIN ─────────────────────────────────────────────────────
-// Se leen de .env (ADMIN_EMAIL / ADMIN_HASH). Los valores por defecto son un
-// respaldo temporal: define los reales en .env y ROTA la contraseña.
+// Se leen de .env (ADMIN_EMAIL / ADMIN_HASH). Sin ADMIN_HASH el login queda
+// deshabilitado (password_verify contra '' siempre devuelve false).
 define('ADMIN_EMAIL', env('ADMIN_EMAIL', 'gerencia@litesco.com.co'));
-define('ADMIN_HASH',  env('ADMIN_HASH',  '$2b$10$tDjr04WKh4b2zHeBSO8CQO3dlCOmq2gyXaKCm.6XLaUOx4l4gY2B.'));
+define('ADMIN_HASH',  env('ADMIN_HASH',  ''));
 
 // ─── HEADERS ────────────────────────────────────────────────────────────────
 header('Content-Type: application/json; charset=UTF-8');
@@ -269,7 +294,7 @@ if (!validateToken($pdo, $token)) {
 // POST list_articulos — artículos del blog disponibles para asociar a un servicio (picker del CMS)
 if ($action === 'list_articulos') {
     $stmt = $pdo->query("
-        SELECT a.id, a.title, a.slug, a.image, a.category, a.published
+        SELECT a.id, a.title, a.slug, a.image, a.category, a.published, a.date
         FROM articles a
         INNER JOIN (SELECT slug, MAX(id) as max_id FROM articles GROUP BY slug) latest ON a.id = latest.max_id
         ORDER BY a.date DESC, a.id DESC

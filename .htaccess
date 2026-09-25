@@ -5,6 +5,13 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# ── Redirigir www → dominio canónico (sin www) ───────────────────────────────
+# Evita contenido duplicado: litesco.com.co y www.litesco.com.co servían las
+# mismas páginas sin redirigir entre sí, diluyendo las señales de marca/SEO
+# (canonical, sitemap y schema ya usan siempre la versión sin www).
+RewriteCond %{HTTP_HOST} ^www\.litesco\.com\.co$ [NC]
+RewriteRule ^(.*)$ https://litesco.com.co/$1 [L,R=301]
+
 # ── Páginas estáticas Next.js (con o sin slash final) ────────────────────────
 # Sirve el .html generado por el build, ignorando si existe carpeta con ese nombre
 RewriteRule ^blog/?$ /blog.html [L]

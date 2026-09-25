@@ -181,6 +181,7 @@ export function buildBreadcrumbSchema(items) {
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
+    name: items.length ? items[items.length - 1].name : 'Inicio',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Inicio', item: SITE_URL },
       ...items.map((item, i) => ({

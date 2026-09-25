@@ -229,6 +229,7 @@ $schemaType = in_array($article['tipo_schema'] ?? '', ['BlogPosting', 'LegalArti
 <?php endif; ?>
 <script type="application/ld+json"><?= json_encode([
     '@context'=>'https://schema.org','@type'=>'BreadcrumbList',
+    'name'=>$article['seo_title']?:$article['title'],
     'itemListElement'=>[
         ['@type'=>'ListItem','position'=>1,'name'=>'Inicio','item'=>'https://litesco.com.co'],
         ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>'https://litesco.com.co/blog'],
@@ -306,7 +307,7 @@ if (META_PIXEL_ID !== ''):
   var eventId = 'vc_' + Date.now() + '_' + Math.random().toString(16).slice(2);
   var contentName = <?= json_encode($title, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, contentCategory = <?= json_encode($catName, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
   fbq('track', 'ViewContent', { content_name: contentName, content_category: contentCategory }, { eventID: eventId });
-  fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+  fetch('https://litesco.com.co/meta-capi-endpoint.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ event: 'ViewContent', event_id: eventId, page_url: location.href, content_name: contentName, content_category: contentCategory }),
@@ -1234,7 +1235,7 @@ document.querySelectorAll('a[href*="wa.me"], a[href="/contacto"]').forEach(funct
     var eventId = 'lead_' + Date.now() + '_' + Math.random().toString(16).slice(2);
     var contentName = <?= json_encode($title, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     fbq('track', 'Lead', { content_name: contentName }, { eventID: eventId });
-    fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+    fetch('https://litesco.com.co/meta-capi-endpoint.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'Lead', event_id: eventId, page_url: location.href, content_name: contentName }),

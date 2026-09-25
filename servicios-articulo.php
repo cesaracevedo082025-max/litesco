@@ -9,7 +9,15 @@
  */
 
 // ─── META PIXEL ID ───────────────────────────────────────────────────────────
-require_once __DIR__ . '/lib/meta-capi.php';
+if (is_file(__DIR__ . '/lib/meta-capi.php')) {
+    require_once __DIR__ . '/lib/meta-capi.php';
+}
+if (!function_exists('env')) {
+    function env($key, $default = null) {
+        $v = getenv($key);
+        return ($v === false || $v === '') ? $default : $v;
+    }
+}
 define('META_PIXEL_ID', env('META_PIXEL_ID', ''));
 
 // ─── CACHÉ: páginas de servicio publicadas (30 minutos) ───────────────────────
@@ -17,6 +25,7 @@ header('Cache-Control: public, max-age=1800, stale-while-revalidate=3600');
 header('Vary: Accept-Encoding');
 
 // ─── CONFIG DB ───────────────────────────────────────────────────────────────
+// Credenciales en .env (vía db-config.php); nunca embebidas en el código.
 $db_config = require __DIR__ . '/db-config.php';
 
 // ─── EXTRAER PARÁMETROS ───────────────────────────────────────────────────────
@@ -147,6 +156,24 @@ $areaCob      = $srv['area_cobertura'] ?: 'Bogotá, Colombia';
 $ctaTipo      = $srv['cta_tipo']       ?: 'whatsapp';
 $canonical    = "https://litesco.com.co/{$linea}/{$slug}";
 
+// Título del hero: resalta en dorado la parte final del título, como el hero del
+// inicio (donde un tramo va en ámbar). Sobre una sola cadena de la BD partimos
+// por palabras y coloreamos desde cerca de la mitad, procurando que el tramo
+// dorado no empiece en una preposición/artículo.
+$h1Html  = $e($h1);
+$h1Words = preg_split('/\s+/', trim($h1), -1, PREG_SPLIT_NO_EMPTY);
+$h1n     = count($h1Words);
+if ($h1n >= 3) {
+    $stop  = ['de','del','la','el','los','las','en','con','y','o','a','para','por','un','una','al','su','sus','que'];
+    $split = (int)ceil($h1n / 2);
+    while ($split < $h1n - 1 && in_array(mb_strtolower(trim($h1Words[$split], " \t\n\r\0\x0B.,;:")), $stop, true)) {
+        $split++;
+    }
+    $h1White  = implode(' ', array_slice($h1Words, 0, $split));
+    $h1Accent = implode(' ', array_slice($h1Words, $split));
+    $h1Html   = $e($h1White) . ' <span class="svc-hero-accent">' . $e($h1Accent) . '</span>';
+}
+
 // FAQs
 $faqs = [];
 if (!empty($srv['faqs'])) {
@@ -229,6 +256,7 @@ $schemaService = [
 $schemaBreadcrumb = [
     '@context'      => 'https://schema.org',
     '@type'         => 'BreadcrumbList',
+    'name'          => $h1,
     'itemListElement' => [
         ['@type'=>'ListItem','position'=>1,'name'=>'Inicio','item'=>'https://litesco.com.co'],
         ['@type'=>'ListItem','position'=>2,'name'=>$lineaNombre,'item'=>"https://litesco.com.co/{$linea}"],
@@ -301,7 +329,7 @@ if (!$previewMode && META_PIXEL_ID !== ''):
   var eventId = 'vc_' + Date.now() + '_' + Math.random().toString(16).slice(2);
   var contentName = '<?= $pageName ?>', contentCategory = '<?= $pageCategory ?>';
   fbq('track', 'ViewContent', { content_name: contentName, content_category: contentCategory }, { eventID: eventId });
-  fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+  fetch('https://litesco.com.co/meta-capi-endpoint.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ event: 'ViewContent', event_id: eventId, page_url: location.href, content_name: contentName, content_category: contentCategory }),
@@ -400,24 +428,29 @@ a{text-decoration:none}
 .reveal.in-view{opacity:1;transform:translateY(0)}
 @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
-/* ── HERO (banda centrada + imagen ancha abajo) ──────────────── */
-.svc-hero{position:relative;background:linear-gradient(180deg,#eef0fa 0%,#f5f6fb 100%);padding:clamp(16px,2.4vw,26px) 0 0;overflow:hidden;text-align:center}
-.svc-hero::before{content:'';position:absolute;top:-100px;right:-90px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,0.1) 0%,transparent 70%);pointer-events:none}
-.svc-hero-inner{max-width:720px;margin:0 auto;padding:0 24px clamp(14px,2.2vw,20px);position:relative}
-.svc-badge{display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11.5px;font-weight:800;color:#b45309;text-transform:uppercase;letter-spacing:2px;font-family:'Montserrat',sans-serif}
-.svc-badge-dot{width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0}
-.svc-hero h1{color:#0A1628;font-size:clamp(1.5rem,3vw,2.1rem);font-weight:700;line-height:1.2;letter-spacing:-0.01em;margin:0 0 8px;font-family:'Playfair Display',Georgia,serif}
-.svc-hero-lead{color:#475569;font-size:clamp(0.9rem,1.15vw,0.98rem);line-height:1.55;margin:0 auto;max-width:58ch}
-.svc-hero-ctas{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
-.svc-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:13px 22px;border-radius:11px;font-weight:700;font-size:13.5px;text-decoration:none;transition:all .2s;font-family:'Montserrat',sans-serif;letter-spacing:.01em}
-.svc-btn-primary{background:#0A1628;color:#fff;box-shadow:0 3px 10px rgba(10,22,40,0.18)}
-.svc-btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(10,22,40,0.24)}
-.svc-btn-wa{background:#25D366;color:#fff;box-shadow:0 3px 10px rgba(37,211,102,0.22)}
-.svc-btn-wa:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,211,102,0.28)}
-.svc-hero-media{max-width:820px;margin:0 auto;padding:0 24px clamp(14px,2.2vw,20px)}
-.svc-hero-media-frame{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 16px 40px rgba(10,22,40,0.14);aspect-ratio:21/9}
-.svc-hero-media-frame img{width:100%;height:100%;object-fit:cover;display:block}
-@media(max-width:640px){.svc-hero-media-frame{aspect-ratio:16/10;border-radius:14px}}
+/* ── HERO (dividido: texto sobre azul animado, imagen a la derecha) ── */
+.svc-hero{position:relative;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,0.92fr);min-height:clamp(380px,56vh,600px);background:#020617;overflow:hidden;isolation:isolate}
+.svc-hero-copy{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:clamp(34px,5.5vw,76px) clamp(24px,5vw,72px);z-index:1;background:#020617}
+.svc-badge{display:inline-flex;align-items:center;gap:9px;margin-bottom:18px;padding:7px 15px 7px 13px;border-radius:9999px;background:rgba(245,158,11,.09);border:1px solid rgba(245,158,11,.28);font-size:11.5px;font-weight:800;color:#fcd34d;text-transform:uppercase;letter-spacing:2px;font-family:'Montserrat',sans-serif}
+.svc-badge-dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;flex-shrink:0;animation:svcPulse 2.6s ease-in-out infinite}
+@keyframes svcPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.55)}55%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}
+.svc-hero h1{color:#fff;font-family:'Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-weight:700;font-size:clamp(2rem,5vw,3.6rem);line-height:1.12;letter-spacing:normal;text-transform:none;margin:0 0 clamp(14px,2vw,22px);text-wrap:balance;text-shadow:0 2px 26px rgba(0,0,0,.45)}
+.svc-hero h1 .svc-hero-accent{color:#f59e0b}
+.svc-hero-lead{color:rgba(255,255,255,.8);font-size:clamp(0.95rem,1.15vw,1.02rem);line-height:1.7;max-width:54ch;margin:0}
+.svc-hero-media{position:relative;min-height:100%;overflow:hidden;background:#020617}
+.svc-hero-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;filter:contrast(1.05) saturate(1.05) brightness(.95);transform:scale(1.06);animation:svcKen 26s ease-in-out infinite alternate;will-change:transform}
+@keyframes svcKen{from{transform:scale(1.06) translate3d(0,0,0)}to{transform:scale(1.16) translate3d(-2.5%,-2%,0)}}
+/* corte diagonal: cuña del color del navbar sobre el borde izquierdo de la foto, con filo dorado en la misma diagonal */
+.svc-hero-media::before{content:'';position:absolute;top:0;bottom:0;left:0;width:100%;z-index:2;pointer-events:none;background:#020617;clip-path:polygon(0 0,110px 0,0 100%)}
+.svc-hero-media::after{content:'';position:absolute;top:0;bottom:0;left:0;width:100%;z-index:3;pointer-events:none;background:linear-gradient(180deg,#f59e0b,#d97706);clip-path:polygon(110px 0,115px 0,5px 100%,0 100%)}
+@media(max-width:860px){
+  .svc-hero{grid-template-columns:1fr;min-height:0}
+  .svc-hero-copy{order:2;padding:clamp(28px,7vw,44px) 24px}
+  .svc-hero-media{order:1;min-height:0;height:clamp(210px,44vw,340px)}
+  .svc-hero-media::before{top:auto;bottom:0;left:0;right:0;width:auto;height:100%;clip-path:polygon(0 100%,100% calc(100% - 54px),100% 100%)}
+  .svc-hero-media::after{top:auto;bottom:0;left:0;right:0;width:auto;height:100%;background:linear-gradient(90deg,#f59e0b,#d97706);clip-path:polygon(0 100%,100% calc(100% - 54px),100% calc(100% - 49px),0 calc(100% - 5px))}
+}
+@media(prefers-reduced-motion:reduce){.svc-badge-dot,.svc-hero-media img{animation:none}.svc-hero-media img{transform:scale(1.04)}}
 
 /* ── BARRA DE COMPROMISOS (valores del servicio, no cifras sin verificar) ── */
 .svc-values{background:#0A1628;padding:26px 24px}
@@ -723,56 +756,18 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
 
 <!-- HERO -->
 <section class="svc-hero">
-  <div class="svc-hero-inner">
+  <div class="svc-hero-copy">
     <div class="svc-badge">
       <span class="svc-badge-dot"></span>
       <?= $e($lineaNombre) ?>
     </div>
-    <h1><?= $e($h1) ?></h1>
+    <h1><?= $h1Html ?></h1>
     <?php if ($resumen): ?>
     <p class="svc-hero-lead"><?= $e($resumen) ?></p>
     <?php endif; ?>
   </div>
   <div class="svc-hero-media">
-    <div class="svc-hero-media-frame">
-      <img src="<?= $e($imagenUrl) ?>" alt="<?= $e($imagenAlt) ?>" width="1200" height="525" loading="eager">
-    </div>
-  </div>
-</section>
-
-<!-- POR QUÉ ELEGIRNOS -->
-<section class="svc-benefits">
-  <div class="svc-benefits-inner">
-    <div class="svc-section-eyebrow">Por qué elegirnos</div>
-    <h2 class="svc-section-title">La tranquilidad de un equipo especializado</h2>
-    <div class="svc-benefits-layout">
-      <div class="svc-benefits-quote reveal">
-        <div class="svc-benefits-quote-mark">“</div>
-        <p class="svc-benefits-quote-text">Sabemos que llegar hasta aquí no fue casual: algo pasó y necesita resolverlo. Le explicamos su caso en palabras simples, le decimos con honestidad qué tan viable es, y solo avanzamos cuando usted tiene claridad — no antes.</p>
-        <div class="svc-benefits-quote-sign">
-          <span class="svc-benefits-quote-sign-line"></span>
-          <span class="svc-benefits-quote-sign-text">Equipo legal LITESCO</span>
-        </div>
-      </div>
-      <div class="svc-benefits-list reveal">
-        <div class="svc-benefits-item">
-          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-          <span class="svc-benefits-text"><strong>Trato directo con su abogado</strong>, no con un call center ni intermediarios.</span>
-        </div>
-        <div class="svc-benefits-item">
-          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-          <span class="svc-benefits-text"><strong>Evaluamos su caso con honestidad</strong>, incluso cuando eso signifique decirle que no conviene litigar.</span>
-        </div>
-        <div class="svc-benefits-item">
-          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-          <span class="svc-benefits-text"><strong>Primera consulta sin costo</strong>, para que decida con información y sin presión.</span>
-        </div>
-        <div class="svc-benefits-item">
-          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-          <span class="svc-benefits-text"><strong>Le explicamos cada paso</strong> en lenguaje claro, sin sorpresas en la factura ni en el proceso.</span>
-        </div>
-      </div>
-    </div>
+    <img src="<?= $e($imagenUrl) ?>" alt="<?= $e($imagenAlt) ?>" width="1200" height="900" loading="eager">
   </div>
 </section>
 
@@ -918,6 +913,42 @@ $_ns = in_array(explode('/', trim($_np, '/'))[0], ['litis','corporativo','recupe
 </section>
 <?php endif; ?>
 
+<!-- POR QUÉ ELEGIRNOS -->
+<section class="svc-benefits">
+  <div class="svc-benefits-inner">
+    <div class="svc-section-eyebrow">Por qué elegirnos</div>
+    <h2 class="svc-section-title">La tranquilidad de un equipo especializado</h2>
+    <div class="svc-benefits-layout">
+      <div class="svc-benefits-quote reveal">
+        <div class="svc-benefits-quote-mark">“</div>
+        <p class="svc-benefits-quote-text">Sabemos que llegar hasta aquí no fue casual: algo pasó y necesita resolverlo. Le explicamos su caso en palabras simples, le decimos con honestidad qué tan viable es, y solo avanzamos cuando usted tiene claridad — no antes.</p>
+        <div class="svc-benefits-quote-sign">
+          <span class="svc-benefits-quote-sign-line"></span>
+          <span class="svc-benefits-quote-sign-text">Equipo legal LITESCO</span>
+        </div>
+      </div>
+      <div class="svc-benefits-list reveal">
+        <div class="svc-benefits-item">
+          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="svc-benefits-text"><strong>Trato directo con su abogado</strong>, no con un call center ni intermediarios.</span>
+        </div>
+        <div class="svc-benefits-item">
+          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="svc-benefits-text"><strong>Evaluamos su caso con honestidad</strong>, incluso cuando eso signifique decirle que no conviene litigar.</span>
+        </div>
+        <div class="svc-benefits-item">
+          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="svc-benefits-text"><strong>Primera consulta sin costo</strong>, para que decida con información y sin presión.</span>
+        </div>
+        <div class="svc-benefits-item">
+          <span class="svc-benefits-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="svc-benefits-text"><strong>Le explicamos cada paso</strong> en lenguaje claro, sin sorpresas en la factura ni en el proceso.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- INFO DE CONTACTO -->
 <div class="svc-contact-strip">
   <div class="svc-contact-strip-inner">
@@ -1006,7 +1037,7 @@ document.querySelectorAll('a[href*="wa.me"], a[href="/contacto"]').forEach(funct
     var eventId = 'lead_' + Date.now() + '_' + Math.random().toString(16).slice(2);
     var contentName = <?= json_encode($nombreSrv, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     fbq('track', 'Lead', { content_name: contentName }, { eventID: eventId });
-    fetch('https://www.litesco.com.co/meta-capi-endpoint.php', {
+    fetch('https://litesco.com.co/meta-capi-endpoint.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'Lead', event_id: eventId, page_url: location.href, content_name: contentName }),

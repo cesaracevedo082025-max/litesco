@@ -390,13 +390,10 @@ const RecuperacionPage = () => {
           </section>
 
           {/* QUÉ ES EL MODELO BPO */}
-          <section className="relative py-32 overflow-hidden bg-white">
-            <div className="absolute inset-0">
-              <m.div
-                animate={{ scale: [1, 1.1, 1], opacity: [0.03, 0.05, 0.03] }}
-                transition={{ duration: 8, repeat: Infinity }}
-                className="absolute top-20 right-20 w-96 h-96 bg-amber-500 rounded-full blur-3xl"
-              />
+          <section className="relative py-32 bg-slate-950 overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-slate-800/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
             </div>
 
             <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
@@ -411,18 +408,19 @@ const RecuperacionPage = () => {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.2 }}
-                  className="inline-block px-6 py-3 bg-slate-900 rounded-full mb-6"
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 mb-6"
                 >
+                  <Sparkles className="w-4 h-4 text-amber-500" />
                   <span className="text-amber-500 font-bold text-sm tracking-widest uppercase">
                     Modelo BPO
                   </span>
                 </m.div>
 
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-6 leading-tight">
-                  ¿Qué es el Modelo <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-700">BPO de Recuperación</span>?
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 leading-tight">
+                  ¿Qué es el Modelo <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">BPO de Recuperación</span>?
                 </h2>
-                
-                <p className="text-xl text-slate-600 max-w-4xl mx-auto">
+
+                <p className="text-xl text-slate-400 max-w-4xl mx-auto font-light">
                   Business Process Outsourcing especializado en recuperación de cartera mediante estrategias integrales
                 </p>
               </m.div>
@@ -439,18 +437,18 @@ const RecuperacionPage = () => {
                     whileHover={{ y: -8, scale: 1.02 }}
                     className="relative group"
                   >
-                    <div className="h-full rounded-3xl bg-gradient-to-br from-white to-amber-50 p-8 shadow-xl border-2 border-amber-200 hover:border-amber-400 transition-all duration-500 hover:shadow-2xl">
+                    <div className="h-full rounded-3xl bg-slate-900/50 border border-slate-800 p-8 backdrop-blur-sm hover:bg-slate-800/80 hover:border-amber-500/30 transition-all duration-500">
                       <div className="flex items-start gap-4 mb-4">
                         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300">
                           <item.icon className="text-2xl text-white" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-xl font-black text-slate-900 mb-2">{item.title}</h3>
-                          <p className="text-slate-600 leading-relaxed text-sm">{item.description}</p>
+                          <h3 className="text-xl font-black text-white mb-2">{item.title}</h3>
+                          <p className="text-slate-400 leading-relaxed text-sm">{item.description}</p>
                         </div>
                       </div>
-                      <div className="mt-4 pt-4 border-t border-amber-200">
-                        <div className="flex items-center gap-2 text-amber-600">
+                      <div className="mt-4 pt-4 border-t border-slate-800">
+                        <div className="flex items-center gap-2 text-amber-500">
                           <FaCheckCircle />
                           <span className="text-sm font-semibold">Implementado y probado</span>
                         </div>
@@ -489,143 +487,8 @@ const RecuperacionPage = () => {
             </div>
           </section>
 
-          {/* =======================================================
-              DIFERENCIADORES CLAVE (ESTILO CORPORATIVO PREMIUM)
-             ======================================================= */}
-          <section className="relative py-24 lg:py-32 bg-slate-950 overflow-hidden">
-            {/* Fondo Elegante */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-slate-800/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
-            </div>
-
-            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {/* Header de Sección */}
-              <m.div 
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-center mb-16 lg:mb-20"
-              >
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 mb-6">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  <span className="text-amber-500 text-xs font-bold tracking-widest uppercase">
-                    Ventajas Competitivas
-                  </span>
-                </div>
-                
-                <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-6">
-                  Diferenciadores <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">Clave</span>
-                </h2>
-                <p className="text-lg text-slate-400 max-w-3xl mx-auto font-light">
-                  Lo que nos hace únicos en recuperación de cartera con tecnología y ética.
-                </p>
-              </m.div>
-
-              {/* Grid de Diferenciadores */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                {diferenciadores.map((item, index) => (
-                  <m.div
-                    key={index}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ y: -5 }}
-                    className="group relative h-full"
-                  >
-                    <div className="relative h-full bg-slate-900/50 border border-slate-800 p-8 rounded-3xl backdrop-blur-sm hover:bg-slate-800/80 hover:border-amber-500/30 transition-all duration-500 flex flex-col">
-                      
-                      <div className="mb-6 relative">
-                        <div className="absolute inset-0 bg-amber-500 blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
-                        <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center group-hover:border-amber-500/50 transition-colors duration-300">
-                          <item.icon className="text-2xl text-amber-500" />
-                        </div>
-                        {item.stats && (
-                          <div className="absolute top-0 right-0 px-2 py-1 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                            <span className="text-[10px] font-bold text-amber-400">{item.stats}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <h3 className="text-xl font-bold text-white mb-3 group-hover:text-amber-400 transition-colors">
-                        {item.title}
-                      </h3>
-                      
-                      <p className="text-slate-400 leading-relaxed text-sm flex-grow">
-                        {item.description}
-                      </p>
-
-                      <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                        <Sparkles className="w-5 h-5 text-amber-500/50" />
-                      </div>
-                    </div>
-                  </m.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* SEGMENTOS DE CLIENTES */}
-          <section className="relative py-32 overflow-hidden bg-gradient-to-b from-white to-slate-50">
-            <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-              <m.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="mb-16 text-center"
-              >
-                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-6">
-                  Segmentos de <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-700">Clientes</span>
-                </h2>
-                
-                <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                  Atendemos diversos sectores con necesidades de recuperación de cartera
-                </p>
-              </m.div>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {segmentos.map((segmento, index) => (
-                  <m.div
-                    key={segmento.nombre}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ y: -8 }}
-                    className="relative group"
-                  >
-                    <div className="h-full rounded-3xl bg-white p-8 shadow-xl border-2 border-slate-200 hover:border-amber-300 transition-all duration-500 hover:shadow-2xl">
-                      <div className="flex flex-col space-y-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                            <segmento.icon className="text-3xl text-white" />
-                          </div>
-                          <h3 className="text-2xl font-black text-slate-900">{segmento.nombre}</h3>
-                        </div>
-                        
-                        <p className="text-slate-600 leading-relaxed">{segmento.descripcion}</p>
-
-                        <div className="pt-4 border-t border-slate-200">
-                          <p className="text-sm font-bold text-slate-700 mb-2">Ejemplos:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {segmento.ejemplos.map((ejemplo, idx) => (
-                              <span key={idx} className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold">
-                                {ejemplo}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </m.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
           {/* SERVICIOS DE RECUPERACIÓN — contenedores de servicio reutilizables (ver ServicioCard) */}
-          <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+          <section className="relative py-16 sm:py-24 lg:py-32 overflow-hidden bg-white">
             <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <m.div
                 initial={{ opacity: 0, y: 30 }}
@@ -726,6 +589,146 @@ const RecuperacionPage = () => {
                   </div>
                 </m.div>
               </AnimatePresence>
+            </div>
+          </section>
+
+          {/* SEGMENTOS DE CLIENTES */}
+          <section className="relative py-32 bg-slate-950 overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[100px] -translate-y-1/2 -translate-x-1/2" />
+              <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-slate-800/20 rounded-full blur-[100px] translate-y-1/2 translate-x-1/2" />
+            </div>
+            <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
+              <m.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="mb-16 text-center"
+              >
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6">
+                  Segmentos de <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">Clientes</span>
+                </h2>
+
+                <p className="text-xl text-slate-400 max-w-3xl mx-auto font-light">
+                  Atendemos diversos sectores con necesidades de recuperación de cartera
+                </p>
+              </m.div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {segmentos.map((segmento, index) => (
+                  <m.div
+                    key={segmento.nombre}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ y: -8 }}
+                    className="relative group"
+                  >
+                    <div className="h-full rounded-3xl bg-slate-900/50 border border-slate-800 p-8 backdrop-blur-sm hover:bg-slate-800/80 hover:border-amber-500/30 transition-all duration-500">
+                      <div className="flex flex-col space-y-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <segmento.icon className="text-3xl text-white" />
+                          </div>
+                          <h3 className="text-2xl font-black text-white">{segmento.nombre}</h3>
+                        </div>
+
+                        <p className="text-slate-400 leading-relaxed">{segmento.descripcion}</p>
+
+                        <div className="pt-4 border-t border-slate-800">
+                          <p className="text-sm font-bold text-slate-300 mb-2">Ejemplos:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {segmento.ejemplos.map((ejemplo, idx) => (
+                              <span key={idx} className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full text-xs font-semibold">
+                                {ejemplo}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </m.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* =======================================================
+              DIFERENCIADORES CLAVE (ESTILO CORPORATIVO PREMIUM)
+             ======================================================= */}
+          <section className="relative py-24 lg:py-32 overflow-hidden bg-gradient-to-b from-slate-50 to-white">
+            <div className="absolute inset-0">
+              <m.div
+                animate={{ scale: [1, 1.1, 1], opacity: [0.03, 0.05, 0.03] }}
+                transition={{ duration: 8, repeat: Infinity }}
+                className="absolute top-20 right-20 w-96 h-96 bg-amber-500 rounded-full blur-3xl"
+              />
+            </div>
+
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {/* Header de Sección */}
+              <m.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-16 lg:mb-20"
+              >
+                <div className="inline-block px-6 py-3 bg-slate-900 rounded-full mb-6">
+                  <span className="text-amber-500 text-xs font-bold tracking-widest uppercase">
+                    Ventajas Competitivas
+                  </span>
+                </div>
+
+                <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-6">
+                  Diferenciadores <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-700">Clave</span>
+                </h2>
+                <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+                  Lo que nos hace únicos en recuperación de cartera con tecnología y ética.
+                </p>
+              </m.div>
+
+              {/* Grid de Diferenciadores */}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                {diferenciadores.map((item, index) => (
+                  <m.div
+                    key={index}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ y: -5 }}
+                    className="group relative h-full"
+                  >
+                    <div className="relative h-full bg-white border-2 border-slate-200 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:border-amber-300 transition-all duration-500 flex flex-col">
+
+                      <div className="mb-6 relative">
+                        <div className="absolute inset-0 bg-amber-500 blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
+                        <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <item.icon className="text-2xl text-white" />
+                        </div>
+                        {item.stats && (
+                          <div className="absolute top-0 right-0 px-2 py-1 bg-amber-100 rounded-lg border border-amber-200">
+                            <span className="text-[10px] font-bold text-amber-700">{item.stats}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-amber-600 transition-colors">
+                        {item.title}
+                      </h3>
+
+                      <p className="text-slate-600 leading-relaxed text-sm flex-grow">
+                        {item.description}
+                      </p>
+
+                      <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                        <Sparkles className="w-5 h-5 text-amber-500/50" />
+                      </div>
+                    </div>
+                  </m.div>
+                ))}
+              </div>
             </div>
           </section>
 

@@ -42,7 +42,7 @@ const BLOG_CATEGORIES = {
   constitucional: { name: 'Constitucional', icon: FaScroll, color: 'purple' },
 }
 
-const BLOG_API_URL = 'https://www.litesco.com.co/blog-api.php'
+const BLOG_API_URL = 'https://litesco.com.co/blog-api.php'
 
 const HomePage = () => {
   const { scrollY } = useScroll()
@@ -180,7 +180,7 @@ const HomePage = () => {
     const metaEventId = generateEventId('lead')
 
     try {
-      const response = await fetch('https://www.litesco.com.co/send-email-simple.php', {
+      const response = await fetch('https://litesco.com.co/send-email-simple.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
